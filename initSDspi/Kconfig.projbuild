@@ -1,0 +1,35 @@
+menu "SD Using SPI Configuration"
+
+    menu "SDCard Configuration"
+
+        config INIT_SPI_MISO_GPIO
+            int "SPI MISO GPIO"
+            default 19
+            help
+                Set the GPIO number used for MISO from SPI.
+                Default is for the SparkThings Plus C Dev Board.
+
+        config INIT_SPI_MOSI_GPIO
+            int "SPI MOSI GPIO"
+            default 23
+            help
+                Set the GPIO number used for MOSI from SPI.
+                Default is for the SparkThings Plus C Dev Board.
+
+        config INIT_SPI_SCLK_GPIO
+            int "SPI SCLK GPIO"
+            default 18
+            help
+                Set the GPIO number used for SCLK from SPI.
+                Default is for the SparkThings Plus C Dev Board.
+
+        config INIT_SPI_CS_GPIO
+            int "SPI CS GPIO"
+            default 5
+            help
+                Set the GPIO number used for CS from SPI.
+                Default is for the SparkThings Plus C Dev Board.
+
+    endmenu
+
+endmenu
