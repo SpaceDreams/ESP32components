@@ -1,0 +1,56 @@
+menu "I2S Configuration"
+    config AUDIO_SAMPLE_RATE
+        int "Audio Sample Rate"
+        default 48000
+        help
+            Set the audio sample rate frequency. Max is 48kHz
+
+    choice BIT_WIDTH
+        prompt "Audio data bit width"
+        default BIT_WIDTH_24BIT
+        help
+            Define the number of bits for each sample. Default 24 bits per sample.
+
+        config BIT_WIDTH_8BIT
+            bool "8-bit"
+        config BIT_WIDTH_16BIT
+            bool "16-bit"
+        config BIT_WIDTH_24BIT
+            bool "24-bit"
+        config BIT_WIDTH_32BIT
+            bool "32-bit"
+    endchoice
+
+    config AUDIO_BIT_WIDTH
+        int
+        default 8 if BIT_WIDTH_8BIT
+        default 16 if BIT_WIDTH_16BIT
+        default 24 if BIT_WIDTH_24BIT
+        default 32 if BIT_WIDTH_32BIT
+    menu "I2S GPIOs config"
+        config I2S_MCK_IO
+            int "MCK pin"
+            default -1
+            help 
+                unused pin is set to -1
+
+        config I2S_BCK_IO
+            int "BCK pin"
+            default 41
+
+        config I2S_WS_IO
+            int "WS pin"
+            default 42
+
+        config I2S_DO_IO
+            int "DOUT pin"
+            default -1
+            help 
+                unused pin is set to -1
+
+        config I2S_DI_IO
+            int "DIN pin"
+            default 2
+
+    endmenu
+endmenu

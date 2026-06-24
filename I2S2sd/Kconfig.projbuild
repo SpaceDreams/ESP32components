@@ -1,10 +1,4 @@
-menu "ADC and SD Configuration"
-    config INIT_SAMPLE_RATE
-        int "Sample Rate"
-        default 44100
-        help
-            Set the sample rate frequency.
-            Oversample rate usually can be 2048000 or 5644800 Hz if only raw PDM data format supported.
+menu "I2S and SD Configuration"
     choice SD_INTERFACE
         prompt "SD Card Interface Protocol"
         default MMC
