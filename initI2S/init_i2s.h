@@ -19,6 +19,7 @@
 /* Audio configuration */
 #define INIT_AUDIO_SAMPLE_RATE       CONFIG_AUDIO_SAMPLE_RATE
 #define INIT_AUDIO_BIT_WIDTH         CONFIG_AUDIO_BIT_WIDTH
+#define INIT_I2S_SLOT_BIT_WIDTH         32 // This is the size of the slot
 
 /* ESP32 configuration */
 #define INIT_CODEC_MCLK_MULTIPLE     (INIT_AUDIO_BIT_WIDTH == 24 ? 384 : 256)

@@ -14,7 +14,7 @@ void init_microphone(void){
      * They can help to specify the slot and clock configurations for initialization or updating */
     i2s_std_config_t std_cfg = {
         .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(INIT_AUDIO_SAMPLE_RATE),
-        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(INIT_AUDIO_BIT_WIDTH, I2S_SLOT_MODE_MONO),
+        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(INIT_AUDIO_BIT_WIDTH, I2S_SLOT_MODE_STEREO),
         .gpio_cfg = {
             .mclk = INIT_I2S_MCK_IO,
             .bclk = INIT_I2S_BCK_IO,
@@ -29,8 +29,8 @@ void init_microphone(void){
         },
     };
     std_cfg.clk_cfg.mclk_multiple = INIT_CODEC_MCLK_MULTIPLE;
-    std_cfg.slot_cfg.slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT;
-    std_cfg.slot_cfg.ws_width =  I2S_SLOT_BIT_WIDTH_32BIT;
+    std_cfg.slot_cfg.slot_bit_width = INIT_I2S_SLOT_BIT_WIDTH;
+    std_cfg.slot_cfg.ws_width =  INIT_I2S_SLOT_BIT_WIDTH;
     // Force driver to focus strictly on the Left slot
     std_cfg.slot_cfg.slot_mask = I2S_STD_SLOT_LEFT; 
     /* Initialize the channel */

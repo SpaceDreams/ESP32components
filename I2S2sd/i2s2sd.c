@@ -9,7 +9,7 @@
 
 static const char *i2s_TAG = "pdm_rec_example";
 
-static int16_t i2s_readraw_buff[SAMPLE_SIZE];
+static int8_t i2s_readraw_buff[SAMPLE_SIZE];
 size_t bytes_read;
 const int WAVE_HEADER_SIZE = 44;
 
@@ -35,22 +35,33 @@ void record_wav(uint32_t rec_time, const char *filename)
     }
 
     // Create new WAV file
-    FILE *f = fopen(filepath, "a");
+    FILE *f = fopen(filepath, "wb");
     if (f == NULL) {
         ESP_LOGE(i2s_TAG, "Failed to open file for writing");
         return;
     }
-    size_t dum_bytes;
+    size_t dum_samples;
+    int samples_read = 0;
     // Write the header to the WAV file
     fwrite(&wav_header, sizeof(wav_header), 1, f);
     // Start recording
     while (written_samples < flash_samples) {
         // Read the RAW samples from the microphone
-        if (i2s_channel_read(rx_handle, (char *)i2s_readraw_buff, SAMPLE_SIZE, &bytes_read, 1000) == ESP_OK) {
-            dum_bytes = ((written_samples + bytes_read/3) < flash_samples) ? bytes_read : 3*(flash_samples - written_samples) ;
-            // Write the samples to the WAV file
-            fwrite(i2s_readraw_buff, dum_bytes, 1, f);
-            written_samples += dum_bytes / 3; // For 24 bit data there's only 3 bytes.
+        if (i2s_channel_read(rx_handle, i2s_readraw_buff, SAMPLE_SIZE, &bytes_read, 1000) == ESP_OK) {
+            samples_read = bytes_read/(INIT_I2S_SLOT_BIT_WIDTH/8);
+            dum_samples = ((written_samples + samples_read) < flash_samples) ? samples_read : (flash_samples - written_samples) ;
+            for (int i = 0; i < dum_samples; i=i+INIT_I2S_SLOT_BIT_WIDTH/8) {
+                uint32_t dumval = i2s_readraw_buff[i]<<24 | i2s_readraw_buff[i+1]<<16 | i2s_readraw_buff[i+2]<<8;
+                int32_t signeddumval = ((int32_t)dumval)>>8;
+                fwrite(&signeddumval, sizeof(int32_t), 1, f);
+                written_samples += 1;
+                /*if (!((i2s_readraw_buff[i+3] == 0xFF) | (i2s_readraw_buff[i+3] == 0))) {
+                    printf(", Error, last byte is: ");
+                    for (int j=0; j<8; j++){
+                        printf("%d", (i2s_readraw_buff[i+3] >> (7 - j)) & 1);
+                    }
+                }*/
+            }
         } else {
             printf("Read Failed!\n");
         }

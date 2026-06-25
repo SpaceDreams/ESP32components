@@ -1,9 +1,27 @@
 menu "I2S Configuration"
-    config AUDIO_SAMPLE_RATE
+
+    choice AUDIO_SAMPLE
         int "Audio Sample Rate"
-        default 48000
+        default AUDIO_SAMPLE_48K
         help
             Set the audio sample rate frequency. Max is 48kHz
+
+        config AUDIO_SAMPLE_8K
+            bool "8KHz"
+        config AUDIO_SAMPLE_16K
+            bool "16KHz"
+        config AUDIO_SAMPLE_24K
+            bool "24KHz"
+        config AUDIO_SAMPLE_48K
+            bool "48KHz"
+    endchoice
+
+    config AUDIO_SAMPLE_RATE
+        int
+        default 8000 if AUDIO_SAMPLE_8K
+        default 16000 if AUDIO_SAMPLE_16K
+        default 24000 if AUDIO_SAMPLE_24K
+        default 48000 if AUDIO_SAMPLE_48K
 
     choice BIT_WIDTH
         prompt "Audio data bit width"
