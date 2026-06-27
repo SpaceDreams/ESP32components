@@ -19,7 +19,7 @@ void stream_audio()
     while (true) {
         // Read the RAW samples from the microphone
         if (i2s_channel_read(rx_handle, i2s_readraw_buff, sizeof(i2s_readraw_buff), &bytes_read, 1000) == ESP_OK) {
-            for (int i = 0; i < bytes_read/sizeof(uint32_t); i++) {
+            for (int i = 0; i < bytes_read/sizeof(uint32_t); i=i+2) {
                 //uint32_t rawbytes = (i2s_readraw_buff[i]<<24) | (i2s_readraw_buff[i+1]<<16) | (i2s_readraw_buff[i+2]<<8);
                 printf("%ld\n", ((long int)i2s_readraw_buff[i])>>8);
                 if (!(((i2s_readraw_buff[i]&0xFF) == 0xFF) | ((i2s_readraw_buff[i]&0xFF) == 0))) {
