@@ -10,6 +10,7 @@
 static const char *i2s_TAG = "pdm_rec_example";
 
 static uint32_t i2s_readraw_buff[SAMPLE_SIZE];
+static uint8_t packed_buffer[SAMPLE_SIZE*3];
 size_t bytes_read;
 const int WAVE_HEADER_SIZE = 44;
 
@@ -48,21 +49,20 @@ void record_wav(uint32_t rec_time, const char *filename)
     while (written_samples < flash_samples) {
         // Read the RAW samples from the microphone
         if (i2s_channel_read(rx_handle, i2s_readraw_buff, sizeof(i2s_readraw_buff), &bytes_read, 1000) == ESP_OK) {
+            size_t packed_index = 0;
             samples_read = bytes_read/sizeof(uint32_t);
             dum_samples = ((written_samples + samples_read) < flash_samples) ? samples_read : (flash_samples - written_samples) ;
             for (int i = 0; i < dum_samples; i++) {
-                for (int j = 0; j< 3; j++){ // Seperates 32 bits into 3 byte increments for the wav file
-                    uint8_t signeddumval = (i2s_readraw_buff[i]>>(16-8*j)) & 0xFF;
-                    fwrite(&signeddumval, sizeof(uint8_t), 1, f);
-                }
+                // Get a byte pointer to the current 32-bit DMA slot
+                uint8_t *sample_bytes = (uint8_t *)&i2s_readraw_buff[i];// seperates 32 bits into 4 elements each with 8 bits.
+                // Bulk-copy the 3 valid audio bytes into our temporary RAM array
+                // This naturally skips sample_bytes (noise) and retains Little-Endian order
+                packed_buffer[packed_index++] = sample_bytes[1]; // Low Audio Byte
+                packed_buffer[packed_index++] = sample_bytes[2]; // Mid Audio Byte
+                packed_buffer[packed_index++] = sample_bytes[3]; // High Audio Byte (MSB)
                 written_samples += 1;
-                /*if (!((i2s_readraw_buff[i+3] == 0xFF) | (i2s_readraw_buff[i+3] == 0))) {
-                    printf(", Error, last byte is: ");
-                    for (int j=0; j<8; j++){
-                        printf("%d", (i2s_readraw_buff[i+3] >> (7 - j)) & 1);
-                    }
-                }*/
             }
+            fwrite(packed_buffer, 1, packed_index, f);
         } else {
             printf("Read Failed!\n");
         }
