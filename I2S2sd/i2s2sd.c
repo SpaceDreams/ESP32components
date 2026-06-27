@@ -57,9 +57,8 @@ void record_wav(uint32_t rec_time, const char *filename)
                 uint8_t *sample_bytes = (uint8_t *)&i2s_readraw_buff[i];// seperates 32 bits into 4 elements each with 8 bits.
                 // Bulk-copy the 3 valid audio bytes into our temporary RAM array
                 // This naturally skips sample_bytes (noise) and retains Little-Endian order
-                packed_buffer[packed_index++] = sample_bytes[1]; // Low Audio Byte
-                packed_buffer[packed_index++] = sample_bytes[2]; // Mid Audio Byte
-                packed_buffer[packed_index++] = sample_bytes[3]; // High Audio Byte (MSB)
+                for (int j=1;j<4;j++)
+                    packed_buffer[packed_index++] = sample_bytes[j]; // Low Audio Byte,Mid Audio Byte,High Audio Byte (MSB)
                 written_samples += 1;
             }
             fwrite(packed_buffer, 1, packed_index, f);
