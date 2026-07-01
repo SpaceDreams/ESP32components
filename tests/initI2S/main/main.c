@@ -6,11 +6,13 @@
 
 /* I2S Digital Microphone Recording Example */
 #include "init_I2S.h"
-#define SINGLE_SAMPLE_SIZE  (32 / 8) // I can store in 2 bytes, or 4 bytes but not 3 bytes.
+#include <string.h> // Needed for memset
+#define SINGLE_SAMPLE_SIZE  (32 / 8)  // I can store in 2 bytes, or 4 bytes but not 3 bytes.
 #define SAMPLE_SIZE         (SINGLE_SAMPLE_SIZE * 1024)
 #define ENABLE_MIC_PIN 14
 
 static uint32_t i2s_readraw_buff[SAMPLE_SIZE];
+static uint8_t packed_buffer[SAMPLE_SIZE][4];
 size_t bytes_read;
 
 void stream_audio()
@@ -19,14 +21,23 @@ void stream_audio()
     while (true) {
         // Read the RAW samples from the microphone
         if (i2s_channel_read(rx_handle, i2s_readraw_buff, sizeof(i2s_readraw_buff), &bytes_read, 1000) == ESP_OK) {
-            for (int i = 0; i < bytes_read/sizeof(uint32_t); i=i+2) {
-                //uint32_t rawbytes = (i2s_readraw_buff[i]<<24) | (i2s_readraw_buff[i+1]<<16) | (i2s_readraw_buff[i+2]<<8);
-                printf("%ld\n", ((long int)i2s_readraw_buff[i])>>8);
-                if (!(((i2s_readraw_buff[i]&0xFF) == 0xFF) | ((i2s_readraw_buff[i]&0xFF) == 0))) {
-                    printf("Error, last byte is: ");
-                    for (int j=0; j<8; j++){
-                        printf("%d", (int)((i2s_readraw_buff[i+3] >> (7 - j)) & 1));
-                    }
+            for (int i = 0; i < bytes_read/sizeof(uint32_t); i++) {
+                uint8_t *sample_bytes = (uint8_t *)&i2s_readraw_buff[i];
+                for (int j=0;j<4;j++)
+                    packed_buffer[i][j] = sample_bytes[j]; // Low Audio Byte,Mid Audio Byte,High Audio Byte (MSB)
+
+            }
+            for (int i = 0; i < bytes_read/sizeof(uint32_t); i++) {
+                if (i%2 == 0){
+                    //printf("%d\n",packed_buffer[i][3]);
+                    for (int j=0;j<4;j++)
+                        printf("%d, ", packed_buffer[i][j]);
+                    printf("\n");
+                }
+                else{
+                    printf("right: ");
+                    for (int j=0;j<4;j++)
+                        printf("%d ", packed_buffer[i][j]);
                     printf("\n");
                 }
             }
@@ -50,7 +61,7 @@ void app_main(void)
 
     // 3. Set the pin level to HIGH (1)
     gpio_set_level(ENABLE_MIC_PIN, 1);
-    // According to the documentation data isn't valid 
+    // According to the documentation data isn't valid for a certain time limit.
     printf("I2S streaming example start\n--------------------------------------\n");
     // Start Recording
     stream_audio();

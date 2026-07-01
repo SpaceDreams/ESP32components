@@ -5,14 +5,16 @@ import queue
 from collections import deque
 
 def is_integer(string):
-    try:
-        int(string)
-        return True
-    except ValueError:
-        return False
-
+    allints = []
+    for i in string:
+        try:
+            int(string)
+            allint.append(True)
+        except ValueError:
+            allint.append(False)
+    return all(allints)
 # Thread-safe queue to pass data between serial thread and plot thread
-data_queue = queue.Queue()
+data_queue = [queue.Queue() for _ in range(4)]
 running = True
 
 def read_serial(port, baudrate):
@@ -21,13 +23,14 @@ def read_serial(port, baudrate):
         ser = serial.Serial(port, baudrate, timeout=1)
         while running:
             if ser.in_waiting > 0:
-                line = ser.readline().decode('utf-8').strip()
-                if is_integer(line):
-                    try:
-                        value = float(line)
-                        data_queue.put(value)
-                    except ValueError:
-                        pass
+                line = ser.readline().decode('utf-8').strip().split(",")
+                if are_integers(line):
+                    for (i in range(len(line)))
+                        try:
+                            value = int(line)
+                            data_queue[i].put(value)
+                        except ValueError:
+                            pass
                 else:
                     print(line)
     except Exception as e:
@@ -37,12 +40,12 @@ def read_serial(port, baudrate):
 
 # Start the background thread
 # Replace 'COM3' with '/dev/ttyACM0' or '/dev/cu.usbserial' depending on your OS
-serial_thread = threading.Thread(target=read_serial, args=('COM6', 9600))
+serial_thread = threading.Thread(target=read_serial, args=('COM7', 9600))
 serial_thread.start()
 
 # Matplotlib setup
 plt.ion()
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(2,2)
 line, = ax.plot([], [], '-')
 data_history = deque(maxlen=100) # Keeps a moving window of 100 points
 
