@@ -4,6 +4,9 @@ i2s_chan_handle_t rx_handle;
 i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
 
 void init_microphone(void){
+    #if INIT_I2S_DMA_TOTAL_BUFFER_SIZE > 4092
+    #error "DMA Buffer is too large! Compilation halted."
+    #endif
     chan_cfg.auto_clear = true; // Auto clear the legacy data in the DMA buffer
     chan_cfg.dma_desc_num = INIT_I2S_DMA_DESC_NUM;
     chan_cfg.dma_frame_num = INIT_I2S_DMA_FRAME_NUM;
