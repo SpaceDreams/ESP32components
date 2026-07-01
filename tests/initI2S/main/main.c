@@ -7,8 +7,10 @@
 /* I2S Digital Microphone Recording Example */
 #include "init_I2S.h"
 #include <string.h> // Needed for memset
-#define SINGLE_SAMPLE_SIZE  (32 / 8)  // I can store in 2 bytes, or 4 bytes but not 3 bytes.
-#define SAMPLE_SIZE         (SINGLE_SAMPLE_SIZE * 128) // Was 1024
+#include "freertos/FreeRTOS.h" // need for portMAXDELAY
+#include "freertos/task.h" // for portMAXDELAY
+//#define SINGLE_SAMPLE_SIZE  (32 / 8)  // I can store in 2 bytes, or 4 bytes but not 3 bytes.
+#define SAMPLE_SIZE         512 //(SINGLE_SAMPLE_SIZE * 1024) // Was 1024
 #define ENABLE_MIC_PIN 14
 
 static uint32_t i2s_readraw_buff[SAMPLE_SIZE];
@@ -20,7 +22,7 @@ void stream_audio()
     init_microphone();
     while (true) {
         // Read the RAW samples from the microphone
-        if (i2s_channel_read(rx_handle, i2s_readraw_buff, sizeof(i2s_readraw_buff), &bytes_read, 1000) == ESP_OK) {
+        if (i2s_channel_read(rx_handle, i2s_readraw_buff, sizeof(uint32_t)*SAMPLE_SIZE, &bytes_read, portMAX_DELAY) == ESP_OK) {
             for (int i = 0; i < bytes_read/sizeof(uint32_t); i++) {
                 uint8_t *sample_bytes = (uint8_t *)&i2s_readraw_buff[i];
                 for (int j=0;j<4;j++)
@@ -28,11 +30,11 @@ void stream_audio()
 
             }
             for (int i = 0; i < bytes_read/sizeof(uint32_t); i++) {
-                if (i%2 == 0){
+                if ((i%2 == 0)){
                     //printf("%d\n",packed_buffer[i][3]);
                     int32_t value = 0;
                     for (int j=1;j<4;j++)
-                        value |= packed_buffer[i][j] << 8*j;
+                        value |= (packed_buffer[i][j] << 8*j);
                         //printf("%d, ", packed_buffer[i][j]);
                     printf("%ld\n",value>>8);
                 }
