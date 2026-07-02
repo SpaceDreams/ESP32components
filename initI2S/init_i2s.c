@@ -17,17 +17,17 @@ void init_microphone(void){
      * They can help to specify the slot and clock configurations for initialization or updating */
     // 1. Setup the slot configuration for a 64*fs BCLK with a 1-clock delay
     i2s_std_slot_config_t slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(
-        I2S_DATA_BIT_WIDTH_32BIT,   // Hardware extracts 24 bits of valid audio data
+        I2S_DATA_BIT_WIDTH_24BIT,   // Hardware extracts 24 bits of valid audio data
         I2S_SLOT_MODE_STEREO        // 2 slots (Left + Right) -> 2 * 32 = 64 * fs BCLK
     );
     // Force driver to focus strictly on the Left slot
     //slot_cfg.slot_mask = I2S_STD_SLOT_BOTH;
-    //slot_cfg.slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT;
+    slot_cfg.slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT;
     //slot_cfg.ws_width =  I2S_SLOT_BIT_WIDTH_32BIT;
     // 2. Setup the clock configuration using the precise Audio PLL
     i2s_std_clk_config_t clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(INIT_AUDIO_SAMPLE_RATE);
-    //clk_cfg.mclk_multiple = I2S_MCLK_MULTIPLE_256;//I2S_MCLK_MULTIPLE_384;      // Perfect bridge for 3 and 64
-    //clk_cfg.bclk_div = 8;//6; // bclk_div = MCLK / BCLK
+    clk_cfg.mclk_multiple = I2S_MCLK_MULTIPLE_256;//I2S_MCLK_MULTIPLE_384;      // Perfect bridge for 3 and 64
+    clk_cfg.bclk_div = 6; // bclk_div = MCLK / BCLK
     //3. combine into one setup:
     i2s_std_config_t std_cfg = {
         .clk_cfg = clk_cfg,
