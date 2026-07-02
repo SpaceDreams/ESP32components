@@ -19,8 +19,8 @@
 /* Audio configuration */
 #define INIT_AUDIO_SAMPLE_RATE       CONFIG_AUDIO_SAMPLE_RATE
 #define INIT_AUDIO_BIT_WIDTH         CONFIG_AUDIO_BIT_WIDTH
-#define INIT_I2S_SLOT_BIT_WIDTH         32 // This is the size of the slot
-#define INIT_AUDIO_CHANNELS           1
+#define INIT_I2S_SLOT_BIT_WIDTH      32 // This is the size of the slot
+#define INIT_AUDIO_CHANNELS          1
 
 /* ESP32 configuration */
 #define INIT_CODEC_MCLK_MULTIPLE     (INIT_AUDIO_BIT_WIDTH == 24 ? 384 : 256)
@@ -28,7 +28,7 @@
 
 /* I2S DMA configuration */
 #define INIT_I2S_DMA_DESC_NUM        8
-#define INIT_I2S_DMA_FRAME_NUM       32 //96
+#define INIT_I2S_DMA_FRAME_NUM       384// Needs to be a multiple of 3 and 4 //previously it was 96
 #define INIT_I2S_DMA_TOTAL_BUFFER_SIZE    //(INIT_I2S_DMA_DESC_NUM * (INIT_I2S_DMA_FRAME_NUM *INIT_AUDIO_CHANNELS *INIT_AUDIO_BIT_WIDTH / 8))
 
 extern i2s_chan_handle_t rx_handle;

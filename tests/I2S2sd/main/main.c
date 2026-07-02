@@ -16,7 +16,7 @@ void app_main(void)
     // According to the documentation data isn't valid 
     printf("I2S recording example start\n--------------------------------------\n");
     ESP_LOGI(TAG, "Starting the recording for %d seconds!", CONFIG_REC_TIME);
-    const char *filename = "I2S_record.wav";
+    const char *filename = "I2S_record_48kHz.wav";
     // Start Recording
     record_wav(CONFIG_REC_TIME, filename);
 }

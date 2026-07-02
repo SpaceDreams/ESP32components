@@ -9,8 +9,7 @@
 
 static const char *i2s_TAG = "pdm_rec_example";
 
-static uint32_t i2s_readraw_buff[SAMPLE_SIZE];
-static uint8_t packed_buffer[SAMPLE_SIZE*3];
+static uint8_t i2s_readraw_buff[SAMPLE_SIZE];
 size_t bytes_read;
 const int WAVE_HEADER_SIZE = 44;
 
@@ -19,7 +18,6 @@ void record_wav(uint32_t rec_time, const char *filename)
     mount_sdcard();
     init_microphone();
     // Use POSIX and C standard library functions to work with files.
-    int written_samples = 0;
     ESP_LOGI(i2s_TAG, "Opening file");
 
     uint32_t flash_samples = INIT_AUDIO_SAMPLE_RATE * rec_time * NUM_CHANNELS;
@@ -41,30 +39,19 @@ void record_wav(uint32_t rec_time, const char *filename)
         ESP_LOGE(i2s_TAG, "Failed to open file for writing");
         return;
     }
-    size_t dum_samples;
-    int samples_read = 0;
     // Write the header to the WAV file
     fwrite(&wav_header, sizeof(wav_header), 1, f);
     // Start recording
+    int written_samples = 0;
     while (written_samples < flash_samples) {
         // Read the RAW samples from the microphone
-        if (i2s_channel_read(rx_handle, i2s_readraw_buff, sizeof(i2s_readraw_buff), &bytes_read, 1000) == ESP_OK) {
-            size_t packed_index = 0;
-            samples_read = bytes_read/sizeof(uint32_t);
-            dum_samples = ((written_samples + samples_read) < flash_samples) ? samples_read : (flash_samples - written_samples) ;
-            for (int i = 0; i < dum_samples; i++) {
-                // Get a byte pointer to the current 32-bit DMA slot
-                uint8_t *sample_bytes = (uint8_t *)&i2s_readraw_buff[i];// seperates 32 bits into 4 elements each with 8 bits.
-                // Bulk-copy the 3 valid audio bytes into our temporary RAM array
-                // This naturally skips sample_bytes (noise) and retains Little-Endian order
-                for (int j=1;j<4;j++)
-                    packed_buffer[packed_index++] = sample_bytes[j]; // Low Audio Byte,Mid Audio Byte,High Audio Byte (MSB)
-                written_samples += 1;
-            }
-            fwrite(packed_buffer, 1, packed_index, f);
-        } else {
+        if (i2s_channel_read(rx_handle, i2s_readraw_buff, SAMPLE_SIZE, &bytes_read, 1000) == ESP_OK) {
+            int samples_read = bytes_read/3;
+            int dum_samples = ((written_samples + samples_read) < flash_samples) ? samples_read : (flash_samples - written_samples) ;
+            fwrite(i2s_readraw_buff, 1, dum_samples*3, f);
+            written_samples += dum_samples;
+        } else
             printf("Read Failed!\n");
-        }
     }
 
     ESP_LOGI(i2s_TAG, "Recording done!");
