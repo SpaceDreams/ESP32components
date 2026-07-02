@@ -23,7 +23,7 @@ void init_microphone(void){
     // Force driver to focus strictly on the Left slot
     //slot_cfg.slot_mask = I2S_STD_SLOT_BOTH;
     slot_cfg.slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT;
-    //slot_cfg.ws_width =  I2S_SLOT_BIT_WIDTH_32BIT;
+    slot_cfg.ws_width =  I2S_SLOT_BIT_WIDTH_32BIT;
     // 2. Setup the clock configuration using the precise Audio PLL
     i2s_std_clk_config_t clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(INIT_AUDIO_SAMPLE_RATE);
     clk_cfg.mclk_multiple = I2S_MCLK_MULTIPLE_256;//I2S_MCLK_MULTIPLE_384;      // Perfect bridge for 3 and 64

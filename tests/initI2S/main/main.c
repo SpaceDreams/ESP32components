@@ -13,8 +13,7 @@
 #define SAMPLE_SIZE         512 //(SINGLE_SAMPLE_SIZE * 1024) // Was 1024
 #define ENABLE_MIC_PIN 14
 
-static uint32_t i2s_readraw_buff[SAMPLE_SIZE];
-//static uint8_t packed_buffer[SAMPLE_SIZE][4];
+static int32_t i2s_readraw_buff[SAMPLE_SIZE];
 size_t bytes_read;
 
 void stream_audio()
@@ -23,31 +22,9 @@ void stream_audio()
     while (true) {
         // Read the RAW samples from the microphone
         if (i2s_channel_read(rx_handle, i2s_readraw_buff, sizeof(uint32_t)*SAMPLE_SIZE, &bytes_read, portMAX_DELAY) == ESP_OK) {
-            for (int i = 0; i < bytes_read/sizeof(uint32_t); i+=2) {
-                uint8_t *sample_bytes = (uint8_t *)&i2s_readraw_buff[i];
-                printf("%ld \n", i2s_readraw_buff[i]>>8);
-                uint32_t swappedval=0;
-                for (int j=1;j<4;j++)
-                    swappedval |= sample_bytes[j]<<8*j; // Low Audio Byte,Mid Audio Byte,High Audio Byte (MSB)
-                if((i2s_readraw_buff[i]>>8) == (swappedval>>8))
-                    printf("Both are the same\n");
-
-            }
-            /*
-            for (int i = 0; i < bytes_read/sizeof(uint32_t); i += 2) {
-                //printf("%d\n",packed_buffer[i][3]);
-                int32_t value = 0;
-                //for (int j=1;j<4;j++)
-                //    value |= (packed_buffer[i][j] << 8*j);
-                    //printf("%d, ", packed_buffer[i][j]);
-                printf("%ld\n",value>>8);
-                else{
-                    printf("right: ");
-                    for (int j=0;j<4;j++)
-                        printf("%d ", packed_buffer[i][j]);
-                    printf("\n");
-                }
-            }*/
+            for (int i = 0; i < bytes_read/sizeof(uint32_t); i+=2) 
+                printf("Raw Integer: %ld | Raw Hex: 0x%08lX\n", i2s_readraw_buff[i], i2s_readraw_buff[i]);
+                //printf("%ld \n", i2s_readraw_buff[i]>>8);
         } else {
             printf("Read Failed!\n");
         }
