@@ -20,25 +20,18 @@ void stream_audio()
 {
     init_microphone();
     // Track whether the current 3-byte block is Left or Right
-    bool is_left_channel = true; 
+    //bool is_left_channel = true; 
     while (true) {
         // Read the RAW samples from the microphone
         if (i2s_channel_read(rx_handle, i2s_readraw_buff, SAMPLE_SIZE, &bytes_read, portMAX_DELAY) == ESP_OK) {
-            //size_t complete_bytes = bytes_read - (bytes_read % 3);
-            for (int i = 0; i < bytes_read; i+=3) {
+            for (int i = 0; i < bytes_read; i+=3) { // Since I'm using a 24 bit mic I have to read in 3 bytes at a time for one sample
                 int32_t value = 0;
                 for (int j = 0; j<3; j++)
                     value |= i2s_readraw_buff[i+j]<<8*j;
-                //printf("Raw Integer: %ld | Raw Hex: 0x%08lX\n", value>>8, value>>8);
-                if (value & 0x00800000) {
-                       value |= 0xFF000000; 
-                }
-                if(is_left_channel)
-                    printf("%ld\n",value);
-                    //printf("Raw Integer: %ld | Raw Hex: 0x%08lX\n", value>>8, value>>8);
-                is_left_channel = !is_left_channel;
+                if (value & 0x00800000)
+                       value |= 0xFF000000;
+                printf("%ld\n",value);
             }
-                //printf("%ld \n", i2s_readraw_buff[i]>>8);
         } else {
             printf("Read Failed!\n");
         }
