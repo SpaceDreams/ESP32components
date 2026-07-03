@@ -10,8 +10,7 @@
 #include "format_wav.h"
 
 #define NUM_CHANNELS        (1) // 1 is for mono recording only!
-#define SINGLE_SAMPLE_SIZE  (INIT_AUDIO_BIT_WIDTH / 8 ) + 1 // I can store in 2 bytes, or 4 bytes but not 3 bytes.
-#define SAMPLE_SIZE         516//(SINGLE_SAMPLE_SIZE * 1024)
+#define SAMPLE_SIZE         INIT_SAMPLE_SIZE
 #define BYTE_RATE           ((INIT_AUDIO_SAMPLE_RATE * (INIT_AUDIO_BIT_WIDTH/8)) * NUM_CHANNELS)
 
 #ifdef __cplusplus
