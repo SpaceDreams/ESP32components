@@ -6,8 +6,8 @@
 #pragma once
 /* I2S Digital Microphone Recording Example */
 #include "init_i2s.h"
-#include "initSDmmc.h"
 #include "format_wav.h"
+#include "initSDmmc.h"
 
 #define NUM_CHANNELS        (1) // 1 is for mono recording only!
 #define SAMPLE_SIZE         INIT_SAMPLE_SIZE

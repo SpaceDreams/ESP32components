@@ -1,13 +1,74 @@
-menu "I2S and SD Configuration"
-    choice SD_INTERFACE
-        prompt "SD Card Interface Protocol"
-        default MMC
+menu "I2S Configuration"
+
+    choice AUDIO_SAMPLE
+        int "Audio Sample Rate"
+        default AUDIO_SAMPLE_48K
+        help
+            Set the audio sample rate frequency. Max is 48kHz
+
+        config AUDIO_SAMPLE_8K
+            bool "8KHz"
+        config AUDIO_SAMPLE_16K
+            bool "16KHz"
+        config AUDIO_SAMPLE_24K
+            bool "24KHz"
+        config AUDIO_SAMPLE_48K
+            bool "48KHz"
+    endchoice
+
+    config AUDIO_SAMPLE_RATE
+        int
+        default 8000 if AUDIO_SAMPLE_8K
+        default 16000 if AUDIO_SAMPLE_16K
+        default 24000 if AUDIO_SAMPLE_24K
+        default 48000 if AUDIO_SAMPLE_48K
+
+    choice BIT_WIDTH
+        prompt "Audio data bit width"
+        default BIT_WIDTH_24BIT
         help
             Define the number of bits for each sample. Default 24 bits per sample.
 
-        config MMC
-            bool "MMC"
-        config SPI
-            bool "SPI"
+        config BIT_WIDTH_8BIT
+            bool "8-bit"
+        config BIT_WIDTH_16BIT
+            bool "16-bit"
+        config BIT_WIDTH_24BIT
+            bool "24-bit"
+        config BIT_WIDTH_32BIT
+            bool "32-bit"
     endchoice
+
+    config AUDIO_BIT_WIDTH
+        int
+        default 8 if BIT_WIDTH_8BIT
+        default 16 if BIT_WIDTH_16BIT
+        default 24 if BIT_WIDTH_24BIT
+        default 32 if BIT_WIDTH_32BIT
+    menu "I2S GPIOs config"
+        config I2S_MCK_IO
+            int "MCK pin"
+            default -1
+            help 
+                unused pin is set to -1
+
+        config I2S_BCK_IO
+            int "BCK pin"
+            default 41
+
+        config I2S_WS_IO
+            int "WS pin"
+            default 42
+
+        config I2S_DO_IO
+            int "DOUT pin"
+            default -1
+            help 
+                unused pin is set to -1
+
+        config I2S_DI_IO
+            int "DIN pin"
+            default 2
+
+    endmenu
 endmenu

@@ -25,5 +25,5 @@ interrupt_interval = dma_frame_num / sample_rate
 dma_desc_num > polling_cycle / interrupt_interval
 recv_buffer_size > dma_desc_num * dma_buffer_size
 ```
-1) [Note:](https://docs.espressif.com/projects/esp-idf/en/v6.0.1/esp32s3/api-reference/peripherals/i2s.html#std-rx-mode) for a 24 bit ADC, dma_frame_num, recv_buffer_size and mclk_multiple should be a multiple of 3
+1) [Note:](https://docs.espressif.com/projects/esp-idf/en/v6.0.1/esp32s3/api-reference/peripherals/i2s.html#std-rx-mode) for a 24 bit ADC, `dma_frame_num`, `recv_buffer_size` and `mclk_multiple` should be a multiple of 3
 
