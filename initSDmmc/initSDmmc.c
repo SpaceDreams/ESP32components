@@ -54,6 +54,9 @@ void mount_sdcard(void)
     const char mount_point[] = SD_MOUNT_POINT;
     ESP_LOGI(SDTAG, "Initializing SD card");
     ESP_LOGI(SDTAG, "Using SDMMC peripheral");
+    // By default, SD card frequency is initialized to SDMMC_FREQ_DEFAULT (20MHz)
+    // For setting a specific frequency, use host.max_freq_khz (range 400kHz - 40MHz for SDMMC)
+    // Example: for fixed frequency of 10MHz, use host.max_freq_khz = 10000;
     host.unaligned_multi_block_rw_max_chunk_size = 8;
     #if CONFIG_EXAMPLE_SDMMC_SPEED_HS
         host.max_freq_khz = SDMMC_FREQ_HIGHSPEED;
