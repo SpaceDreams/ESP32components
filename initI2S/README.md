@@ -18,7 +18,7 @@ the start of each half‐frame. Lastly, Word select is a 50% duty cycle. This is
 
 1) Gather the data: `sample_rate`, `data_bit_width`, `slot_num` and `polling_cycle`.
    The polling cycle is how much time required to process the data after it is read. Two examples are: streaming data to a PC, saving data to a SD card. `slot_num` is the number of slots for one data collection cycle.
-1) The maximum DMA buffer size is 4096; so I can calculate the 
+1) The maximum DMA buffer size is 4092; so I can calculate the descriptor number and the frame number using the relations below:
 ```
 dma_frame_num = dma_max_buffer_size/slot_num/data_bit_width*8
 interrupt_interval = dma_frame_num / sample_rate
