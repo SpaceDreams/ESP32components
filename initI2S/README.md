@@ -23,7 +23,7 @@ the start of each half‐frame. Lastly, Word select is a 50% duty cycle. This is
 dma_frame_num = dma_max_buffer_size/slot_num/data_bit_width*8
 interrupt_interval = dma_frame_num / sample_rate
 dma_desc_num > polling_cycle / interrupt_interval
-recv_buffer_size > dma_desc_num * dma_buffer_size
+recv_buffer_size > dma_desc_num * dma_max_buffer_size
 ```
 1) [Note:](https://docs.espressif.com/projects/esp-idf/en/v6.0.1/esp32s3/api-reference/peripherals/i2s.html#std-rx-mode) for a 24 bit ADC, `dma_frame_num`, `recv_buffer_size` and `mclk_multiple` should be a multiple of 3
 
