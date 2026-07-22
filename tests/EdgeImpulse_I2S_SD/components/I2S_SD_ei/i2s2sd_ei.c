@@ -5,21 +5,24 @@
  */
 
 /* I2S Digital Microphone Recording Example */
-#include "i2s2sd.h"
+#include "i2s2sd_ei.h"
 
-static const char *i2s_TAG = "pdm_rec_example";
+static const char *i2s_TAG = "rec_example";
 
-static uint8_t i2s_readraw_buff[SAMPLE_SIZE];
+uint8_t i2s_readraw_buff[SAMPLE_SIZE];
 size_t bytes_read;
 const int WAVE_HEADER_SIZE = 44;
 
-void record_wav(uint32_t rec_time, const char *filename)
+void record_wav(void *ArgPointer)
 {
+    struct recordArgs *funcArgs = (struct recordArgs *) ArgPointer;
+    uint32_t rec_time = funcArgs->rec_time;
+    const char *filename = funcArgs->filename;
     mount_sdcard();
     init_microphone();
     // Use POSIX and C standard library functions to work with files.
     ESP_LOGI(i2s_TAG, "Opening file");
-
+    printf("made it here");
     uint32_t flash_samples = INIT_AUDIO_SAMPLE_RATE * rec_time * NUM_CHANNELS;
     const wav_header_t wav_header =
         WAV_HEADER_PCM_DEFAULT(BYTE_RATE * rec_time, INIT_AUDIO_BIT_WIDTH, INIT_AUDIO_SAMPLE_RATE, NUM_CHANNELS);
@@ -47,14 +50,15 @@ void record_wav(uint32_t rec_time, const char *filename)
         // Read the RAW samples from the microphone
         if (i2s_channel_read(rx_handle, i2s_readraw_buff, SAMPLE_SIZE, &bytes_read, 1000) == ESP_OK) {
             if (bytes_read <= 0) {
-                ei_printf("Error in I2S read : %d", bytes_read);
+                printf("Error in I2S read : %d", bytes_read);
             }
             else {
-                if (bytes_read < SAMPLE_SIZE) ei_printf("Partial I2S read");
+                if (bytes_read < SAMPLE_SIZE) printf("Partial I2S read");
                 int samples_read = bytes_read/3;
                 int dum_samples = ((written_samples + samples_read) < flash_samples) ? samples_read : (flash_samples - written_samples) ;
                 fwrite(i2s_readraw_buff, 1, dum_samples*3, f);
                 written_samples += dum_samples;
+                funcArgs->loop_callback(dum_samples);
             }
         } else
             printf("Read Failed!\n");

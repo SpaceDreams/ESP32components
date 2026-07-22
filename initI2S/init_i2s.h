@@ -25,21 +25,24 @@
 /* ESP32 configuration */
 #define INIT_CODEC_MCLK_MULTIPLE     (INIT_AUDIO_BIT_WIDTH == 24 ? 384 : 256) 
 #define INIT_CODEC_MCLK_FREQ_HZ      (INIT_CODEC_MCLK_MULTIPLE * INIT_AUDIO_SAMPLE_RATE)
-#define INIT_POLLING_CYCLE           100 //in milliseconds, must be an integer. This is time required to process all slots of one sample
+//polling cycle: time it takes to process the entire DMA Buffer.
+//The maximum time required to process the total DMA Buffer (ie 1/INIT_AUDIO_SAMPLE_RATE*num_of_samples_per_DMA_buffer)
+#define INIT_POLLING_CYCLE           100 //in milliseconds, must be an integer. 
 
 /*BUFFER CONFIG BOUNDARIES*/
-#define dma_buffer_size_max          4092
-#define dma_frame_num_max            (dma_buffer_size_max/INIT_I2S_SLOT_NUMS/INIT_AUDIO_BIT_WIDTH*8)
-#define interrupt_interval_max       (dma_frame_num_max  / (INIT_AUDIO_SAMPLE_RATE/1000) )
+#define dma_buffer_size_max          4092 //bytes
+#define dma_frame_num_max            (dma_buffer_size_max/INIT_I2S_SLOT_NUMS/INIT_AUDIO_BIT_WIDTH*8) // For 24 bit: 1364
+#define INIT_I2S_DMA_FRAME_NUM       (INIT_AUDIO_BIT_WIDTH == 24 ? (dma_frame_num_max/3)*3 : dma_frame_num_max) // For 24 bit: 1362
+
+#define interrupt_interval_max       (INIT_I2S_DMA_FRAME_NUM  / (INIT_AUDIO_SAMPLE_RATE/1000) ) // For 24 bit: 28
                                      // Careful with units, Here I want polling cycle and interrupt interval to have the same units
-#define dma_desc_num_min             ((INIT_POLLING_CYCLE / interrupt_interval_max) + 1) //adding one is for the ceiling function
-#define recv_buffer_size_min         dma_desc_num_min * dma_buffer_size_max
+#define dma_desc_num_min             ((INIT_POLLING_CYCLE / interrupt_interval_max) + 1) //adding one is for the ceiling function // For 24 bit: 4
+#define recv_buffer_size_min         dma_desc_num_min * dma_buffer_size_max // 4*4092 =16368
 
 /* I2S DMA configuration */
 #define INIT_I2S_DMA_DESC_NUM        dma_desc_num_min
-#define INIT_I2S_DMA_FRAME_NUM       (INIT_AUDIO_BIT_WIDTH == 24 ? (dma_frame_num_max/3)*3 : dma_frame_num_max) 
                                      // Needs to be a multiple of 3 for a 24 bit adc
-#define INIT_SAMPLE_SIZE            (INIT_AUDIO_BIT_WIDTH == 24 ? (recv_buffer_size_min/3+1)*3 : recv_buffer_size_min)
+#define INIT_SAMPLE_SIZE            (INIT_AUDIO_BIT_WIDTH == 24 ? (recv_buffer_size_min/3+1)*3 : recv_buffer_size_min) // For 24 bit: 16371
 
 extern i2s_chan_handle_t rx_handle;
 
