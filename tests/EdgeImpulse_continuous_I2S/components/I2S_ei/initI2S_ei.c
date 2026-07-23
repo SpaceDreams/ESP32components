@@ -22,14 +22,14 @@ void sample_audio(void *ArgPointer)
     while (true) {
         // Read the RAW samples from the microphone
         if (i2s_channel_read(rx_handle, i2s_readraw_buff, SAMPLE_SIZE, &bytes_read, portMAX_DELAY) == ESP_OK) {
-            funcArgs->loop_callback(bytes_read);
+            funcArgs->loop_callback(i2s_readraw_buff, bytes_read);
         } else {
             printf("Read Failed!\n");
         }
     }
-
     /* Have to stop the channel before deleting it */
     i2s_channel_disable(rx_handle);
     /* If the handle is not needed any more, delete it to release the channel resources */
     i2s_del_channel(rx_handle);
+    vTaskDelete(NULL);
 }

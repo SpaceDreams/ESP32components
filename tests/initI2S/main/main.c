@@ -10,7 +10,7 @@
 #include "freertos/FreeRTOS.h" // need for portMAXDELAY
 #include "freertos/task.h" // for portMAXDELAY
 //#define SINGLE_SAMPLE_SIZE  (32 / 8)  // I can store in 2 bytes, or 4 bytes but not 3 bytes.
-#define SAMPLE_SIZE         516 //(SINGLE_SAMPLE_SIZE * 1024) // Was 1024 Using a 24 bit 
+#define SAMPLE_SIZE         INIT_SAMPLE_SIZE //(SINGLE_SAMPLE_SIZE * 1024) // Was 1024 Using a 24 bit 
 #define ENABLE_MIC_PIN 14
 
 static uint8_t i2s_readraw_buff[SAMPLE_SIZE];
@@ -27,7 +27,7 @@ void stream_audio()
             for (int i = 0; i < bytes_read; i+=3) { // Since I'm using a 24 bit mic I have to read in 3 bytes at a time for one sample
                 int32_t value = 0;
                 for (int j = 0; j<3; j++)
-                    value |= i2s_readraw_buff[i+j]<<8*j;
+                    value |= (int32_t)i2s_readraw_buff[i+j]<<(8*j);
                 if (value & 0x00800000)
                        value |= 0xFF000000;
                 printf("%ld\n",value);
