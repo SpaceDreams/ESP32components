@@ -3,7 +3,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "edge-impulse-sdk/classifier/ei_run_classifier.h"
-#include "i2s2sd_ei.h"
+#include "initI2S_ei.h"
 
 #define EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW 4
 
@@ -24,7 +24,7 @@ inference_t inference;
 bool debug_nn = false; // Set this to true to see e.g. features generated from the raw signal
 int print_results = -(EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW);
 
-void audio_inference_callback(uint32_t n_bytes)
+void audio_inference_callback(size_t n_bytes)
 {  // There is a catch here; i2s is 24 bit; so 
     for (int i = 0; i < n_bytes/3; i++) {
         for (int j = 0; j<3; j++)
@@ -42,35 +42,24 @@ bool microphone_inference_start(uint32_t n_samples)
 {
     inference.buffers[0] = (uint8_t *)malloc(n_samples * 3);
 
-    //if (inference.buffers[0] == NULL) {
-    //    return false;
-    //}
-
     inference.buffers[1] = (uint8_t *)malloc(n_samples * 3);
-
-    //if (inference.buffers[1] == NULL) {
-    //    ei_free(inference.buffers[0]);
-    //    return false;
-    //}
 
     inference.buf_select = 0;
     inference.buf_count = 0;
     inference.n_samples = n_samples;
     inference.buf_ready = 0;
 
-    struct recordArgs myArgs = {
-        .rec_time = 60,
-        .filename = "ei_Audio_data.wav",
+    struct sampleArgs myArgs = {
         .loop_callback = audio_inference_callback
          };
     xTaskCreatePinnedToCore(
-        sample_audio,         // Task function
-        "Sample_I2S_data",    // Task name
-        20000,                // Max Bytes required for task
+        sample_audio,            // Task function
+        "Sample_I2S_data",       // Task name
+        SAMPLE_SIZE*2+10,                 // Max Bytes required for task // The 10 extra bytes is for program to run
         &myArgs,              // Pointer to your struct of arguments
         1,                    // Task priority
         NULL,                 // Task handle
-        1                     // Pin to Core 1 (APP_CPU)
+        0                    // Pin to Core 1 (APP_CPU)
     );
 
     return true;
@@ -100,11 +89,10 @@ int microphone_audio_signal_get_data(size_t offset, size_t num_of_samples, float
 {
     // Process the conversion to floats
     for (size_t i = 0; i < num_of_samples; i++) {
-        int j = i*3;
         // Unpack the 3 bytes into an unsigned 32-bit integer container (MSB First)
-        uint32_t unpacked_data = ((uint32_t)inference.buffers[inference.buf_select ^ 1][offset*3+j]     << 16) |
-                                 ((uint32_t)inference.buffers[inference.buf_select ^ 1][offset*3+j + 1] << 8)  |
-                                 ((uint32_t)inference.buffers[inference.buf_select ^ 1][offset*3+j + 2]);
+        uint32_t unpacked_data = ((uint32_t)inference.buffers[inference.buf_select ^ 1][(offset+i)*3]     << 16) |
+                                 ((uint32_t)inference.buffers[inference.buf_select ^ 1][(offset+i)*3 + 1] << 8)  |
+                                 ((uint32_t)inference.buffers[inference.buf_select ^ 1][(offset+i)*3 + 2]);
 
         // Perform Sign Extension (Crucial for negative sound wave numbers)
         // A 24-bit signed number has its sign bit at bit position 23.

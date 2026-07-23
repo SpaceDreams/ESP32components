@@ -22,7 +22,6 @@ void record_wav(void *ArgPointer)
     init_microphone();
     // Use POSIX and C standard library functions to work with files.
     ESP_LOGI(i2s_TAG, "Opening file");
-    printf("made it here");
     uint32_t flash_samples = INIT_AUDIO_SAMPLE_RATE * rec_time * NUM_CHANNELS;
     const wav_header_t wav_header =
         WAV_HEADER_PCM_DEFAULT(BYTE_RATE * rec_time, INIT_AUDIO_BIT_WIDTH, INIT_AUDIO_SAMPLE_RATE, NUM_CHANNELS);
@@ -56,7 +55,6 @@ void record_wav(void *ArgPointer)
                 if (bytes_read < SAMPLE_SIZE) printf("Partial I2S read");
                 int samples_read = bytes_read/3;
                 int dum_samples = ((written_samples + samples_read) < flash_samples) ? samples_read : (flash_samples - written_samples) ;
-                fwrite(i2s_readraw_buff, 1, dum_samples*3, f);
                 written_samples += dum_samples;
                 funcArgs->loop_callback(dum_samples);
             }
