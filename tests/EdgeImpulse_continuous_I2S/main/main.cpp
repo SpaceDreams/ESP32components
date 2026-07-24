@@ -76,7 +76,7 @@ bool microphone_inference_start(uint32_t n_samples)
     xTaskCreatePinnedToCore(
         sample_audio,            // Task function
         "Sample_I2S_data",       // Task name
-        20480,                 // Max Bytes required for task // this doesn't count DMA and sample buffers
+        20480,                 // Max Bytes required for task // DMA buffer and sample buffer don't count since they were allocated at the program startup
         &myArgs,              // Pointer to your struct of arguments
         1,                    // Task priority
         NULL,                 // Task handle
@@ -116,7 +116,7 @@ int microphone_audio_signal_get_data(size_t offset, size_t num_of_samples, float
     // Process the conversion to floats
     for (size_t i = 0; i < num_of_samples; i++) {
         // Unpack the 3 bytes into an unsigned 32-bit integer container (LSB First)
-        int32_t unpacked_data = 0;
+        uint32_t unpacked_data = 0;
         for (int j = 0; j<3; j++)
             unpacked_data |= (uint32_t)inference.buffers[inference.buf_select ^ 1][(offset+i)*3+j]<<(8*j);
         // Perform Sign Extension (Crucial for negative sound wave numbers)
@@ -145,7 +145,7 @@ extern "C" void app_main()
     ei_printf_float((float)EI_CLASSIFIER_INTERVAL_MS);
     ei_printf(" ms.\n");
     ei_printf("\tFrame size: %d\n", EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE);
-    ei_printf("\tSample length: %d ms.\n", EI_CLASSIFIER_RAW_SAMPLE_COUNT / 48);
+    ei_printf("\tSample length: %d ms.\n", EI_CLASSIFIER_RAW_SAMPLE_COUNT / (INIT_AUDIO_SAMPLE_RATE/1000));
     ei_printf("\tNo. of classes: %d\n", sizeof(ei_classifier_inferencing_categories) / sizeof(ei_classifier_inferencing_categories[0]));
 
     run_classifier_init();
