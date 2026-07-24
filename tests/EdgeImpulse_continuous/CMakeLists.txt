@@ -8,6 +8,8 @@ set(EXTRA_COMPONENT_DIRS "../..")
 idf_build_set_property(MINIMAL_BUILD ON)
 
 project(esp32_EdgeImpulseTests)
+# ADD THIS LINE HERE TO APPLY IT GLOBALLY TO ALL COMPONENTS:
+add_compile_definitions(EI_CLASSIFIER_CONTINUOUS=1)
 
 idf_build_set_property(COMPILE_OPTIONS "-fdiagnostics-color=always" APPEND)
 idf_build_set_property(COMPILE_OPTIONS "-Wno-unused-variable" APPEND)

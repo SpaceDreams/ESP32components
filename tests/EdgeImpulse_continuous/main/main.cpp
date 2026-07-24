@@ -90,7 +90,6 @@ bool microphone_inference_record(void)
     size_t samps = EI_CLASSIFIER_SLICE_SIZE;
     audio_inference_callback(&features[samplesTaken] , samps);
     samplesTaken += samps;
-    inference.buf_ready = 0;
     return ret;
 }
 
@@ -103,6 +102,8 @@ int microphone_audio_signal_get_data(size_t offset, size_t length, float *out_pt
     for (size_t i = 0; i < length; i++) {
         out_ptr[i] = static_cast<float>(inference.buffers[inference.buf_select ^ 1][offset+i]);
     }
+    ei_printf("Buffer size: %d, Requested end: %d (offset: %d, length: %d)\n", 
+                  inference.n_samples, offset + length, offset, length);
     return 0;
 }
 
@@ -159,6 +160,7 @@ extern "C" void app_main()
         ei_printf_float(result.anomaly);
         ei_printf("\n");
     #endif
+        inference.buf_ready = 0;
     }
     free(inference.buffers[0]); 
     free(inference.buffers[1]);

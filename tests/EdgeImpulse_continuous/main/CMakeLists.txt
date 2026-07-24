@@ -11,3 +11,7 @@ target_compile_options(${COMPONENT_LIB} PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-std=gnu++17;${my_component_flags}> 
     $<$<COMPILE_LANGUAGE:C>:${my_component_flags}>
 )
+
+target_compile_definitions(${COMPONENT_LIB} PRIVATE 
+    -DEI_CLASSIFIER_CONTINUOUS=1
+)
