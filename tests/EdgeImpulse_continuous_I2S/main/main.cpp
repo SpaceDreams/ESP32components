@@ -126,6 +126,8 @@ int microphone_audio_signal_get_data(size_t offset, size_t num_of_samples, float
             unpacked_data |= 0xFF000000; // Force top byte to be negative padding
         out_ptr[i] = static_cast<float>(static_cast<int32_t>(unpacked_data));//Cast to a signed int first then float
     }
+    //ei_printf("Buffer size: %d, Requested end: %d (offset: %d, num_of_samples: %d)\n", 
+      //            inference.n_samples, offset + num_of_samples, offset, num_of_samples);
     return 0;
 }
 

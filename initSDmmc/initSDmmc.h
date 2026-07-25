@@ -19,7 +19,7 @@ extern sdmmc_card_t *card;
 extern "C" {
 #endif
 
-void mount_sdcard(void);
+const char* mount_sdcard(void);
 
 #ifdef __cplusplus
 }

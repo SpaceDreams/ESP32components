@@ -7,7 +7,6 @@ const char SDTAG[] = "init_SD";
 // toggling power to the card.
 sdmmc_host_t host = SDMMC_HOST_DEFAULT();
 sdmmc_card_t *card;
-
 #if CONFIG_EXAMPLE_PIN_CARD_POWER_RESET
 static esp_err_t s_example_reset_card_power(void)
 {
@@ -40,18 +39,18 @@ static esp_err_t s_example_reset_card_power(void)
 }
 #endif // CONFIG_EXAMPLE_PIN_CARD_POWER_RESET
 
-void mount_sdcard(void)
+const char* mount_sdcard(void)
 {
     esp_err_t ret;
     // Options for mounting the filesystem.
     // If format_if_mount_failed is set to true, SD card will be partitioned and
     // formatted in case when mounting fails.
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-        .format_if_mount_failed = true,
+        .format_if_mount_failed = false,
         .max_files = 5,
         .allocation_unit_size = 16 * 1024
     };
-    const char mount_point[] = SD_MOUNT_POINT;
+    const char *mount_point = SD_MOUNT_POINT;
     ESP_LOGI(SDTAG, "Initializing SD card");
     ESP_LOGI(SDTAG, "Using SDMMC peripheral");
     // By default, SD card frequency is initialized to SDMMC_FREQ_DEFAULT (20MHz)
@@ -123,10 +122,11 @@ void mount_sdcard(void)
                 check_sd_card_pins(&config, pin_count);
             #endif
         }
-    return;
+    return NULL;
     }
     ESP_LOGI(SDTAG, "Filesystem mounted");
 
     // Card has been initialized, print its properties
     sdmmc_card_print_info(stdout, card);
+    return mount_point;
 }

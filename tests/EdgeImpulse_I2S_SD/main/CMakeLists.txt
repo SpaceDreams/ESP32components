@@ -1,5 +1,5 @@
 idf_component_register(SRCS "main.cpp"
-                    REQUIRES EdgeImpulse I2S_SD_ei)
+                    REQUIRES EdgeImpulse I2S_ei helperfuncs_ei)
 
 # Define your list of flags
 set(my_component_flags
