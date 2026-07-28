@@ -23,7 +23,7 @@
 /* Include ----------------------------------------------------------------- */
 // If your target is limited in memory remove this macro to save 10K RAM
 #define EIDSP_QUANTIZE_FILTERBANK   0
-#define EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW 4
+#define EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW 2
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -76,7 +76,7 @@ bool microphone_inference_start(uint32_t n_samples)
     inference.buffers[0] = (uint8_t *)malloc(n_samples * 3);
     inference.buffers[1] = (uint8_t *)malloc(n_samples * 3);
     if (inference.buffers[0]==NULL || inference.buffers[1] == NULL) {
-        ESP_LOGE(TAG, "Failed to create allocate Memory for Inference Buffers!");
+        ESP_LOGE(TAG, "Failed to allocate Memory for Inference Buffers!");
         return false;
     }
     inference.buf_select = 0;
@@ -105,34 +105,11 @@ bool microphone_inference_start(uint32_t n_samples)
 
     return true;
 }
-/*
-bool microphone_inference_record(void)
-{
-    bool ret = true;
-    if (inference.buf_ready == 1) {
-        ei_printf(
-            "Error sample buffer overrun. Decrease the number of slices per model window "
-            "(EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)\n");
-        ret = false;
-    }
-    while (inference.buf_ready == 0) {
-        vTaskDelay(1);
-    }
-
-    inference.buf_ready = 0;
-    return ret;
-}
-*/
 /**
  * Get raw audio signal data
  */
 int microphone_audio_signal_get_data(size_t offset, size_t num_of_samples, float *out_ptr)
 {
-    // CRITICAL CRASH PROTECTION: Check if your C driver actually allocated memory!
-    if (inference.buffers[0] == NULL || inference.buffers[1] == NULL) {
-        printf("CRITICAL: Edge Impulse stopped! Buffers are NULL. Check your allocation logic.\n");
-        return -1; 
-    }
     // Process the conversion to floats
     for (size_t i = 0; i < num_of_samples; i++) {
         // Unpack the 3 bytes into an unsigned 32-bit integer container (LSB First)
@@ -145,6 +122,10 @@ int microphone_audio_signal_get_data(size_t offset, size_t num_of_samples, float
         if (unpacked_data & 0x00800000) 
             unpacked_data |= 0xFF000000; // Force top byte to be negative padding
         out_ptr[i] = static_cast<float>(static_cast<int32_t>(unpacked_data));//Cast to a signed int first then float
+        int32_t round_trip = static_cast<int32_t>(out_ptr[i]);
+        // Step 3: Assert they are perfectly identical
+        if (round_trip != unpacked_data) 
+            ESP_LOGE(TAG, "Mismatch found at: %ld != %ld", round_trip,unpacked_data);
     }
     //ei_printf("Buffer size: %d, Requested end: %d (offset: %d, num_of_samples: %d)\n", 
       //            inference.n_samples, offset + num_of_samples, offset, num_of_samples);
@@ -212,17 +193,17 @@ extern "C" void app_main()
         }
         int32_t dumvar = curr_samples+EI_CLASSIFIER_SLICE_SIZE < totsamples ? EI_CLASSIFIER_SLICE_SIZE : totsamples - curr_samples;
         fwrite(inference.buffers[inference.buf_select ^ 1], 1, dumvar*3, rec_file);
-        if (++print_results >= (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)) {
+        //if (++print_results >= (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)) {
             // print the predictions
             fprintf(inference_logs,"at %f seconds:\nPredictions (DSP: %d ms., Classification: %d ms., Anomaly: %d ms.): \n",
                 ((float)curr_samples)/INIT_AUDIO_SAMPLE_RATE,result.timing.dsp, result.timing.classification, result.timing.anomaly);
             for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) 
                 fprintf(inference_logs,"    %s: %f\n", result.classification[ix].label,result.classification[ix].value);
-            #if EI_CLASSIFIER_HAS_ANOMALY == 1
+        #if EI_CLASSIFIER_HAS_ANOMALY == 1
                 fprintf(inference_logs, "    anomaly score: %f\n"result.anomaly,);
         #endif
             print_results = 0;
-        }
+        //}
         curr_samples += EI_CLASSIFIER_SLICE_SIZE;
     }
     // All done, unmount partition and disable SDMMC peripheral

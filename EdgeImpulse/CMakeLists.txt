@@ -70,7 +70,9 @@ list(APPEND my_component_flags "-fno-if-conversion")
 
 idf_component_register(SRCS ${SOURCE_FILES}
                        PRIV_REQUIRES esp_timer
-                       INCLUDE_DIRS ${include_dirs})
+                       INCLUDE_DIRS ${include_dirs}
+		      # EMBED_FILES "tflite-model/tflite_learn_1052597_5.tflite"
+                      )
 
 target_compile_options(${COMPONENT_LIB} PRIVATE 
     $<$<COMPILE_LANGUAGE:CXX>:-std=gnu++17;${my_component_flags}> 

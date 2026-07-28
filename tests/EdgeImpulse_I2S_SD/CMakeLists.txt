@@ -21,3 +21,4 @@ idf_build_set_property(COMPILE_OPTIONS "-Wno-stringop-truncation" APPEND)
 idf_build_set_property(COMPILE_OPTIONS "-Wno-deprecated-declarations" APPEND)
 idf_build_set_property(COMPILE_OPTIONS "-fno-if-conversion" APPEND)
 
+
