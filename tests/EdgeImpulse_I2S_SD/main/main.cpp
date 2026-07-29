@@ -23,7 +23,7 @@
 /* Include ----------------------------------------------------------------- */
 // If your target is limited in memory remove this macro to save 10K RAM
 #define EIDSP_QUANTIZE_FILTERBANK   0
-#define EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW 2
+#define EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW 6
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -49,7 +49,7 @@ typedef struct { // To save space this buffer takes bytes; this way the 3 byte m
 
 inference_t inference;
 bool debug_nn = false; // Set this to true to see e.g. features generated from the raw signal
-int print_results = -(EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW);
+int print_results = 0;
 uint32_t rec_time = 60; // seconds
 uint32_t totsamples = rec_time*INIT_AUDIO_SAMPLE_RATE;
 uint32_t curr_samples = 0;
@@ -96,7 +96,7 @@ bool microphone_inference_start(uint32_t n_samples)
     xTaskCreatePinnedToCore(
         sample_audio,            // Task function
         "Sample_I2S_data",       // Task name
-        20480,                 // Max Bytes required for task // DMA buffer and sample buffer don't count since they were allocated at the program startup
+        10000,                 // Max Bytes required for task // DMA buffer and sample buffer don't count since they were allocated at the program startup
         &myArgs,              // Pointer to your struct of arguments
         1,                    // Task priority
         NULL,                 // Task handle
@@ -123,7 +123,7 @@ int microphone_audio_signal_get_data(size_t offset, size_t num_of_samples, float
             unpacked_data |= 0xFF000000; // Force top byte to be negative padding
         out_ptr[i] = static_cast<float>(static_cast<int32_t>(unpacked_data));//Cast to a signed int first then float
         int32_t round_trip = static_cast<int32_t>(out_ptr[i]);
-        // Step 3: Assert they are perfectly identical
+        // Assert they are perfectly identical
         if (round_trip != unpacked_data) 
             ESP_LOGE(TAG, "Mismatch found at: %ld != %ld", round_trip,unpacked_data);
     }
@@ -193,23 +193,24 @@ extern "C" void app_main()
         }
         int32_t dumvar = curr_samples+EI_CLASSIFIER_SLICE_SIZE < totsamples ? EI_CLASSIFIER_SLICE_SIZE : totsamples - curr_samples;
         fwrite(inference.buffers[inference.buf_select ^ 1], 1, dumvar*3, rec_file);
-        //if (++print_results >= (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)) {
+        if (++print_results >= (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW/2)) {
             // print the predictions
             fprintf(inference_logs,"at %f seconds:\nPredictions (DSP: %d ms., Classification: %d ms., Anomaly: %d ms.): \n",
                 ((float)curr_samples)/INIT_AUDIO_SAMPLE_RATE,result.timing.dsp, result.timing.classification, result.timing.anomaly);
             for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) 
                 fprintf(inference_logs,"    %s: %f\n", result.classification[ix].label,result.classification[ix].value);
         #if EI_CLASSIFIER_HAS_ANOMALY == 1
-                fprintf(inference_logs, "    anomaly score: %f\n"result.anomaly,);
+                fprintf(inference_logs, "    anomaly score: %f\n"result.anomaly);
         #endif
             print_results = 0;
-        //}
+        }
         curr_samples += EI_CLASSIFIER_SLICE_SIZE;
     }
     // All done, unmount partition and disable SDMMC peripheral
     fclose(rec_file);
     fclose(inference_logs);
     microphone_inference_end();
+    //run_classifier_deinit(); This has caused a memory error; possibly from 
     esp_vfs_fat_sdcard_unmount(mount_point, card);
     ESP_LOGI(TAG, "Card Unmounted");
 }
