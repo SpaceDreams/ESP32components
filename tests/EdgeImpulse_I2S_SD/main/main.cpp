@@ -23,7 +23,7 @@
 /* Include ----------------------------------------------------------------- */
 // If your target is limited in memory remove this macro to save 10K RAM
 #define EIDSP_QUANTIZE_FILTERBANK   0
-#define EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW 6
+#define EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW 4
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -122,10 +122,13 @@ int microphone_audio_signal_get_data(size_t offset, size_t num_of_samples, float
         if (unpacked_data & 0x00800000) 
             unpacked_data |= 0xFF000000; // Force top byte to be negative padding
         out_ptr[i] = static_cast<float>(static_cast<int32_t>(unpacked_data));//Cast to a signed int first then float
-        int32_t round_trip = static_cast<int32_t>(out_ptr[i]);
+        uint8_t * round_trip = (uint8_t *) &unpacked_data;
         // Assert they are perfectly identical
-        if (round_trip != unpacked_data) 
-            ESP_LOGE(TAG, "Mismatch found at: %ld != %ld", round_trip,unpacked_data);
+        for (int k = 0; k<3; k++){
+            bool passed = (inference.buffers[inference.buf_select ^ 1][(offset+i)*3+k] == round_trip[k])?true:false;
+            if (!passed) 
+                ESP_LOGE(TAG, "Mismatch found at: %d != %d, k=%d\n", inference.buffers[inference.buf_select ^ 1][(offset+i)*3+k],round_trip[k],k);
+        }
     }
     //ei_printf("Buffer size: %d, Requested end: %d (offset: %d, num_of_samples: %d)\n", 
       //            inference.n_samples, offset + num_of_samples, offset, num_of_samples);
@@ -191,6 +194,7 @@ extern "C" void app_main()
             ei_printf("ERR: Failed to run classifier (%d)\n", r);
             return;
         }
+        curr_samples += EI_CLASSIFIER_SLICE_SIZE;
         int32_t dumvar = curr_samples+EI_CLASSIFIER_SLICE_SIZE < totsamples ? EI_CLASSIFIER_SLICE_SIZE : totsamples - curr_samples;
         fwrite(inference.buffers[inference.buf_select ^ 1], 1, dumvar*3, rec_file);
         if (++print_results >= (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW/2)) {
@@ -200,11 +204,10 @@ extern "C" void app_main()
             for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) 
                 fprintf(inference_logs,"    %s: %f\n", result.classification[ix].label,result.classification[ix].value);
         #if EI_CLASSIFIER_HAS_ANOMALY == 1
-                fprintf(inference_logs, "    anomaly score: %f\n"result.anomaly);
+                fprintf(inference_logs, "    anomaly score: %f\n",result.anomaly);
         #endif
             print_results = 0;
         }
-        curr_samples += EI_CLASSIFIER_SLICE_SIZE;
     }
     // All done, unmount partition and disable SDMMC peripheral
     fclose(rec_file);
