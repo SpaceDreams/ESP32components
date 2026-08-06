@@ -17,9 +17,9 @@ extern "C" {
 #endif
 
 struct sampleArgs {
-    void (*loop_callback)(uint8_t* raw_buffer, size_t bytes_read);
+    bool (*loop_callback)(uint8_t* raw_buffer, size_t bytes_read, FILE* f);
+    FILE* rec_file;
 };
-extern volatile bool keep_reading_i2s;
 extern uint8_t i2s_readraw_buff[];
 extern size_t bytes_read;
 void sample_audio(void *ArgPointer);

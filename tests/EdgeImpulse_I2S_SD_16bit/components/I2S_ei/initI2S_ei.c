@@ -3,7 +3,6 @@
 
 
 uint8_t i2s_readraw_buff[SAMPLE_SIZE];
-volatile bool keep_reading_i2s=true;
 
 void sample_audio(void *ArgPointer)
 {
@@ -20,10 +19,11 @@ void sample_audio(void *ArgPointer)
     size_t bytes_read;
     // According to the documentation data isn't valid for a certain time limit.
     printf("I2S streaming starts now\n--------------------------------------\n");
+    bool keep_reading_i2s=true;
     while (keep_reading_i2s) {
         // Read the RAW samples from the microphone
         if (i2s_channel_read(rx_handle, i2s_readraw_buff, SAMPLE_SIZE, &bytes_read, portMAX_DELAY) == ESP_OK) {
-            funcArgs->loop_callback(i2s_readraw_buff, bytes_read);
+            keep_reading_i2s=funcArgs->loop_callback(i2s_readraw_buff, bytes_read, funcArgs->rec_file);
         } else {
             printf("Read Failed!\n");
         }
