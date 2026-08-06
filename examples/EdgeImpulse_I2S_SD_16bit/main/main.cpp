@@ -142,7 +142,7 @@ void microphone_inference_end(void)
 FILE* init_wavfile(uint32_t rec_time, const char *filename)
 {
     FILE* f = init_file(filename);
-    /*
+    
     // 1. Pre-allocate the entire estimated size (e.g., 10 MB total)
     uint8_t wavheadersize = 44; //bytes
     uint32_t total_file_size = rec_time*INIT_AUDIO_SAMPLE_RATE*(AUDIO_BIT_WIDTH/8)+wavheadersize;
@@ -151,7 +151,7 @@ FILE* init_wavfile(uint32_t rec_time, const char *filename)
     
     // 2. Rewind to the beginning
     fseek(f, 0, SEEK_SET);
-    */
+    
     const wav_header_t wav_header =
         WAV_HEADER_PCM_DEFAULT(BYTE_RATE * rec_time, AUDIO_BIT_WIDTH, INIT_AUDIO_SAMPLE_RATE, NUM_CHANNELS);
     // Write the header to the WAV file

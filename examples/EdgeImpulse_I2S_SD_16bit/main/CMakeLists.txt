@@ -15,9 +15,9 @@ target_compile_options(${COMPONENT_LIB} PRIVATE
 
 #Include the below only if you are using the tflite model:
 # 1. Fetch the absolute directory of your custom EdgeImpulse component
-#idf_component_get_property(edge_impulse_dir EdgeImpulse COMPONENT_DIR)
+idf_component_get_property(edge_impulse_dir EdgeImpulse COMPONENT_DIR)
 
 # 2. Tell the main assembler to search inside the EdgeImpulse directory
 #    This lets it resolve "tflite-model/tflite_learn_1052597_5.tflite" successfully
-#target_compile_options(__idf_main PRIVATE "-Wa,-I${edge_impulse_dir}")
+target_compile_options(__idf_main PRIVATE "-Wa,-I${edge_impulse_dir}")
 
