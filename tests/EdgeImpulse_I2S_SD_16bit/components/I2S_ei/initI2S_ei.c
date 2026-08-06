@@ -1,9 +1,9 @@
 /* I2S Digital Microphone Recording Example */
 #include "initI2S_ei.h"
-
+#include "esp_log.h"
 
 uint8_t i2s_readraw_buff[SAMPLE_SIZE];
-
+static const char* TAG = "I2S_TESTS";
 void sample_audio(void *ArgPointer)
 {
     struct sampleArgs *funcArgs = (struct sampleArgs *) ArgPointer;
@@ -28,6 +28,7 @@ void sample_audio(void *ArgPointer)
             printf("Read Failed!\n");
         }
     }
+    ESP_LOGI(TAG, "Completed Recording Shutting down I2S");
     /* Have to stop the channel before deleting it */
     i2s_channel_disable(rx_handle);
     /* If the handle is not needed any more, delete it to release the channel resources */

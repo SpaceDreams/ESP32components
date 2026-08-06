@@ -78,11 +78,16 @@ extern "C" bool audio_inference_callback(uint8_t* raw_buffer, size_t n_bytes, FI
         int32_t dumvar = EI_CLASSIFIER_SLICE_SIZE;
         if(rec_samples+EI_CLASSIFIER_SLICE_SIZE > totsamples){
             dumvar = totsamples - rec_samples;
-            keep_reading_i2s = false;
-            }
+            keep_reading_i2s = false;// Done Reading I2S
+        }
         fwrite(inference.buffers[inference.buf_select ^ 1], sizeof(inference.buffers[inference.buf_select ^ 1][0]), dumvar, f);
         rec_samples += dumvar;
     }
+    // Close file if I do not keep reading I2S
+    if(!keep_reading_i2s){
+            fclose(f);
+            ESP_LOGI(TAG, "I2S Data Saved; file closed.");
+        }
     return keep_reading_i2s;
 }
 
@@ -206,21 +211,21 @@ extern "C" void app_main()
             ei_printf("ERR: Failed to run classifier (%d)\n", r);
             return;
         }
-        curr_classifications += 1;
         curr_samples += EI_CLASSIFIER_SLICE_SIZE;
         if (++print_results >= (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW/2)) {
             // save the performance results:
-            timing_results[curr_classifications-1][0] = (uint)(1000.0f * ((float)curr_samples / INIT_AUDIO_SAMPLE_RATE));
-            timing_results[curr_classifications-1][1] = result.timing.dsp; 
-            timing_results[curr_classifications-1][2] = result.timing.classification;
+            timing_results[curr_classifications][0] = (uint)(1000.0f * ((float)curr_samples / INIT_AUDIO_SAMPLE_RATE));
+            timing_results[curr_classifications][1] = result.timing.dsp; 
+            timing_results[curr_classifications][2] = result.timing.classification;
             // save the classification results:
             for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) 
-                classification_results[curr_classifications-1][ix] = result.classification[ix].value;
+                classification_results[curr_classifications][ix] = result.classification[ix].value;
             print_results = 0;
+            curr_classifications++;
         }
+        if (curr_classifications> totnum_classifications)
+            ESP_LOGI(TAG, "Predicted the Wrong number of Classifications");
     }
-    // Done Saving recordings
-    fclose(rec_file);
     // save the predictions
     FILE* inference_logs = init_file("inference_logs_16bit.txt");
     for (int i = 0; i<totnum_classifications; i++)
@@ -232,6 +237,7 @@ extern "C" void app_main()
     }
     // Done Saving Predictions
     fclose(inference_logs);
+    ESP_LOGI(TAG, "Classification Data Saved");
     microphone_inference_end();
     run_classifier_deinit(); //Is this the cause of the memory error?
     esp_vfs_fat_sdcard_unmount(mount_point, card);
