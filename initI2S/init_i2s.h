@@ -27,7 +27,7 @@
 #define INIT_CODEC_MCLK_FREQ_HZ      (INIT_CODEC_MCLK_MULTIPLE * INIT_AUDIO_SAMPLE_RATE)
 //polling cycle: time it takes to process the entire DMA Buffer.
 //The maximum time required to process the total DMA Buffer (ie 1/INIT_AUDIO_SAMPLE_RATE*num_of_samples_per_DMA_buffer)
-#define INIT_POLLING_CYCLE           60 //in milliseconds, must be an integer. 
+#define INIT_POLLING_CYCLE           100 //in milliseconds, must be an integer. 
 
 /*BUFFER CONFIG BOUNDARIES*/
 #define dma_buffer_size_max          4092 //bytes
