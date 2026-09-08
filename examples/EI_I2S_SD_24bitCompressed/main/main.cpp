@@ -24,14 +24,13 @@
 // If your target is limited in memory remove this macro to save 10K RAM
 #define EIDSP_QUANTIZE_FILTERBANK   0
 #define EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW 4
+#include <math.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
-#include "nvs_flash.h"
 #include "edge-impulse-sdk/classifier/ei_run_classifier.h"
 #include "initI2S_ei.h"
 #include "initSDwav_ei.h"
-
 
 #define NUM_CHANNELS        INIT_I2S_SLOT_NUMS
 #define AUDIO_BIT_WIDTH     16 //INIT_AUDIO_BIT_WIDTH
@@ -40,7 +39,7 @@
 /** Audio buffers, pointers and selectors */
 typedef struct { // To save space this buffer takes bytes; this way the 3 byte mic is saved directly 
                  //    instead of converting it to a 32bit integer.
-    uint16_t *buffers[2]; 
+    int16_t *buffers[2]; 
     unsigned char buf_select;
     SemaphoreHandle_t buf_ready;
     // This now will represent contained samples
@@ -57,16 +56,35 @@ uint32_t rec_time = 60; // seconds
 uint32_t totsamples = rec_time*INIT_AUDIO_SAMPLE_RATE;
 uint32_t rec_samples = 0;
 static const char* TAG = "EI_TESTS";
-SemaphoreHandle_t finishedSaving;// Used to tell the main app that saving audio data is finished.
+SemaphoreHandle_t savingdone;
+
+int16_t compress24bit(uint8_t * unpacked_data){
+    //** This function compresses the raw 24 bit data into 16 bits using mu law compression **//
+    uint32_t packed_data = 0;
+    for (int j = 0; j<3; j++)
+        packed_data |= (uint32_t)unpacked_data[j]<<(8*j);
+    // Perform Sign Extension (Crucial for negative sound wave numbers)
+    // A 24-bit signed number has its sign bit at bit position 23.
+    // If bit 23 is a 1, the number is negative, and we must fill the top 8 bits with 1s.
+    float signfunc = 1;
+    if (packed_data & 0x00800000) {
+            packed_data |= 0xFF000000; // Force top byte to be negative padding
+            signfunc = -1;
+        }
+    int32_t res = static_cast<int32_t>(packed_data);//Cast to a signed int first then float
+    // mu law compression:
+    float norm = (float)res / powf(2.0f,23.0f);
+    float mu = powf(2.0f,8.0f)-1.0f;
+    float compressed = signfunc * logf(1.0f + mu * fabsf(norm)) / logf(1.0f + mu);
+    return (int16_t)(compressed * (powf(2.0f,15.0f)-1.0f));    
+}
 
 extern "C" bool audio_inference_callback(uint8_t* raw_buffer, size_t n_bytes, FILE* f)
 {  // There is a catch here; i2s is 24 bit; so 
     bool buf_ready = false;
     bool keep_reading_i2s = true;
     for (int i = 0; i < n_bytes/3; i++) {
-        uint8_t low_byte = raw_buffer[i*3+1];
-        uint8_t high_byte = raw_buffer[i*3+2];
-        inference.buffers[inference.buf_select][inference.buf_count] = (((uint16_t)high_byte)<<8)|low_byte;
+        inference.buffers[inference.buf_select][inference.buf_count] = compress24bit(&raw_buffer[i*3]);
         inference.buf_count++;
         if(inference.buf_count >= inference.n_samples) {
             inference.buf_select ^= 1;
@@ -88,24 +106,24 @@ extern "C" bool audio_inference_callback(uint8_t* raw_buffer, size_t n_bytes, FI
     }
     // Close file if I do not keep reading I2S
     if(!keep_reading_i2s){
-            fclose(f);
-            ESP_LOGI(TAG, "I2S Data Saved; file closed.");
-            xSemaphoreGive(finishedSaving);
-        }
+        fclose(f);
+        ESP_LOGI(TAG, "I2S Data Saved; file closed.");
+        xSemaphoreGive(savingdone);
+    }
     return keep_reading_i2s;
 }
 
 bool microphone_inference_start(uint32_t n_samples, FILE* f)
 {
-    inference.buffers[0] = (uint16_t *)calloc(n_samples, sizeof(uint16_t));
-    inference.buffers[1] = (uint16_t *)calloc(n_samples, sizeof(uint16_t));
+    inference.buffers[0] = (int16_t *)calloc(n_samples, sizeof(int16_t));
+    inference.buffers[1] = (int16_t *)calloc(n_samples, sizeof(int16_t));
     inference.buf_select = 0;
     inference.buf_count = 0;
     inference.n_samples = n_samples;
     //inference.buf_ready = 0;
     inference.buf_ready = xSemaphoreCreateBinary();
-    finishedSaving = xSemaphoreCreateBinary();
-    if (inference.buf_ready == NULL || finishedSaving== NULL ) {
+    savingdone = xSemaphoreCreateBinary();
+    if (inference.buf_ready == NULL || savingdone == NULL) {
         ESP_LOGE(TAG, "Failed to create semaphore!");
         return false;
     }
@@ -134,7 +152,7 @@ int microphone_audio_signal_get_data(size_t offset, size_t num_of_samples, float
 {
     // Process the conversion to floats
     for (size_t i = 0; i < num_of_samples; i++)
-        out_ptr[i] = static_cast<float>(static_cast<int16_t>(inference.buffers[inference.buf_select ^ 1][offset+i]));
+        out_ptr[i] = static_cast<float>(inference.buffers[inference.buf_select ^ 1][offset+i]);
     return 0;
 }
 
@@ -148,72 +166,28 @@ FILE* init_wavfile(uint32_t rec_time, const char *filename)
 {
     FILE* f = init_file(filename);
     
+    const wav_header_t wav_header =
+        WAV_HEADER_PCM_DEFAULT(BYTE_RATE * rec_time, AUDIO_BIT_WIDTH, INIT_AUDIO_SAMPLE_RATE, NUM_CHANNELS);
     // 1. Pre-allocate the entire estimated size (e.g., 10 MB total)
-    uint8_t wavheadersize = 44; //bytes
+    uint8_t wavheadersize = sizeof(wav_header); //bytes
     uint32_t total_file_size = rec_time*INIT_AUDIO_SAMPLE_RATE*(AUDIO_BIT_WIDTH/8)+wavheadersize;
     fseek(f, total_file_size - 1, SEEK_SET);
     fputc(0, f);
     
     // 2. Rewind to the beginning
     fseek(f, 0, SEEK_SET);
-    
-    const wav_header_t wav_header =
-        WAV_HEADER_PCM_DEFAULT(BYTE_RATE * rec_time, AUDIO_BIT_WIDTH, INIT_AUDIO_SAMPLE_RATE, NUM_CHANNELS);
     // Write the header to the WAV file
-    fwrite(&wav_header, sizeof(wav_header), 1, f);
+    fwrite(&wav_header, wavheadersize, 1, f);
     return f;
 }
 
-nvs_handle_t get_counter(int32_t *counter_pointer){
-    /////// Determine Number of Total Recordings since last flashed.
-    // Initialize NVS
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        // NVS partition was truncated and needs to be erased
-        // Retry nvs_flash_init
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(err);
-    // Open NVS handle
-    ESP_LOGI(TAG, "\nOpening Non-Volatile Storage (NVS) handle...");
-    nvs_handle_t my_handle;
-    err = nvs_open("storage", NVS_READWRITE, &my_handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Error (%s) opening NVS handle!", esp_err_to_name(err));
-        return 255; //This would be an error
-    }
-    // Read back the value
-    ESP_LOGI(TAG, "\nReading counter from NVS...");
-    err = nvs_get_i32(my_handle, "counter", counter_pointer);
-    switch (err) {
-        case ESP_OK:
-            ESP_LOGI(TAG, "Read counter = %" PRIu32, *counter_pointer);
-            break;
-        case ESP_ERR_NVS_NOT_FOUND:
-            ESP_LOGW(TAG, "The value is not initialized yet!");
-            *counter_pointer = 0;
-            break;
-        default:
-            ESP_LOGE(TAG, "Error (%s) reading!", esp_err_to_name(err));
-    }
-    return my_handle;
-}
+
 
 
 extern "C" void app_main()
 {
-    // This is for setting up multiple cases:
-    int32_t boot_counter = 0;
-    nvs_handle_t my_handle = get_counter(&boot_counter);
-    const char *classification_cases[] = {"faucet_off","faucet_on","faucet_onoff"};
-    int length = snprintf(NULL, 0, "faucetfile_16bit_%s.wav", classification_cases[boot_counter]);
-    char *wavfilename = (char *)malloc((length + 1)* sizeof(char));
-    snprintf(wavfilename, length + 1, "faucetfile_16bit_%s.wav", classification_cases[boot_counter]);
-
-    // Here I am opening the file and creating the name:
     const char *mount_point = mount_sdcard();
-    FILE* rec_file = init_wavfile(rec_time, wavfilename);
+    FILE* rec_file = init_wavfile(rec_time, "faucetfile_Compressed24bit.wav");
     // summary of inferencing settings (from model_metadata.h)
     ei_printf("Inferencing settings:\n");
     ei_printf("\tInterval: ");
@@ -230,7 +204,7 @@ extern "C" void app_main()
     // Saving the timing results: time, dsp timing, classification timing
     uint32_t totnum_classifications = (EI_CLASSIFIER_RAW_SAMPLE_COUNT/INIT_AUDIO_SAMPLE_RATE)*rec_time*2;//the 2 comes from (window size)/(frame size)
     uint32_t curr_classifications=0;
-    uint16_t timing_results[totnum_classifications][3]={};
+    uint timing_results[totnum_classifications][3]={};
     // Saving the classification results:
     float classification_results[totnum_classifications][EI_CLASSIFIER_LABEL_COUNT]={};
 
@@ -246,7 +220,6 @@ extern "C" void app_main()
     signal.total_length = EI_CLASSIFIER_SLICE_SIZE;
     signal.get_data = &microphone_audio_signal_get_data;
     ei_impulse_result_t result = {0};
-    uint8_t classifiertotals[EI_CLASSIFIER_LABEL_COUNT]={0};
 
     while(curr_samples<totsamples)
     {
@@ -263,53 +236,35 @@ extern "C" void app_main()
         curr_samples += EI_CLASSIFIER_SLICE_SIZE;
         if (++print_results >= (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW/2)) {
             // save the performance results:
-            timing_results[curr_classifications][0] = (uint16_t)(1000.0f * ((float)curr_samples / INIT_AUDIO_SAMPLE_RATE));
-            timing_results[curr_classifications][1] = (uint16_t)result.timing.dsp; 
-            timing_results[curr_classifications][2] = (uint16_t)result.timing.classification;
+            timing_results[curr_classifications][0] = (uint)(1000.0f * ((float)curr_samples / INIT_AUDIO_SAMPLE_RATE));
+            timing_results[curr_classifications][1] = result.timing.dsp; 
+            timing_results[curr_classifications][2] = result.timing.classification;
             // save the classification results:
-            for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
+            for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) 
                 classification_results[curr_classifications][ix] = result.classification[ix].value;
-                if(result.classification[ix].value>0.8)
-                    classifiertotals[ix]+=1;
-            }
             print_results = 0;
             curr_classifications++;
         }
         if (curr_classifications> totnum_classifications)
             ESP_LOGI(TAG, "Predicted the Wrong number of Classifications");
     }
-    if(xSemaphoreTake(finishedSaving, portMAX_DELAY) != pdTRUE) ESP_LOGI(TAG, "Took too long to finish Saving");
-    // Create the filename for the predictions
-    length = snprintf(NULL, 0, "inference_logs_16bit_%s.txt", classification_cases[boot_counter]);
-    char *inferencefilename = (char *)malloc((length + 1)* sizeof(char));
-    snprintf(inferencefilename, length + 1, "inference_logs_16bit_%s.txt", classification_cases[boot_counter]);
-    FILE* inference_logs = init_file(inferencefilename);
-    // save the predictions
-    for (int i = 0; i<totnum_classifications; i++)
-    {
-        fprintf(inference_logs,"at %ld ms.:\nPredictions (DSP: %ld ms., Classification: %ld ms.): \n",
-                timing_results[i][0], timing_results[i][1], timing_results[i][2]);
-        for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) 
-            fprintf(inference_logs, "    %s: %f\n", result.classification[ix].label, classification_results[i][ix]);
-    }
-    // Save the totals:
-    for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++)
-                fprintf(inference_logs, "Total Classification Probabilities above 0.8    %s: %d\n", 
-                        result.classification[ix].label, classifiertotals[ix]);
-    // Done Saving Predictions
-    fclose(inference_logs);
-    ESP_LOGI(TAG, "Classification Data Saved");
-    microphone_inference_end();
-    run_classifier_deinit(); 
-    esp_vfs_fat_sdcard_unmount(mount_point, card);
-    ESP_LOGI(TAG, "Card Unmounted");
-
-    // Increment the counter then save
-    boot_counter++;
-    ESP_LOGI(TAG, "\nWriting counter to NVS...");
-    esp_err_t err = nvs_set_i32(my_handle, "counter", boot_counter);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to write counter!");
+    if(xSemaphoreTake(savingdone, portMAX_DELAY) == pdTRUE){
+        // save the predictions
+        FILE* inference_logs = init_file("inference_logs_Compressed24bit.txt");
+        for (int i = 0; i<totnum_classifications; i++)
+        {
+            fprintf(inference_logs,"at %d ms.:\nPredictions (DSP: %d ms., Classification: %d ms.): \n",
+                    timing_results[i][0], timing_results[i][1], timing_results[i][2]);
+            for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) 
+                    fprintf(inference_logs, "    %s: %f\n", result.classification[ix].label, classification_results[i][ix]);
+        }
+        // Done Saving Predictions
+        fclose(inference_logs);
+        ESP_LOGI(TAG, "Classification Data Saved");
+        microphone_inference_end();
+        run_classifier_deinit(); //Is this the cause of the memory error?
+        esp_vfs_fat_sdcard_unmount(mount_point, card);
+        ESP_LOGI(TAG, "Card Unmounted");
     }
 }
 

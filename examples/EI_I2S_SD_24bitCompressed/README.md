@@ -1,14 +1,12 @@
 This example is made only after realizing Edge Impulses upload limitions for WAV files is 16bit. As of this writing no wav files above 16bit are supported on Edge Impluse and after upload it is scaled down non-uniformily so emulating that on a chip is not feasable without more information about Edge Impluses API. 
 
-This script goes over a few cases and since the custom board I have doesn't have any trigger buttons; the only way to trigger multiple recordings is to reboot. 
-So, in the code I have one setup where I use the ESP32's NVS to track the reboots where the number is used to correlate to the order of cases above. To reset 
-this counter, in the same terminal used to flash the chip type `idf.py erase-flash`
-
 # Usage Requirements
 
 The default memory for an esp32 main application is approx: 3584 Bytes. At the time of this writing I save the classification results to ram before saving to the sd card; for this reason alone this project needs more ram, about 8kB. It can be changed `idf.py menuconfig` ->Component Config ->ESP System Settings->Main Task Stack Size
 
 This has been tested with a stack size of 8192 Bytes.
+
+Lastly, the SD Card reader should be set to High Speed: `idf.py menuconfig`->SD Using MMC Configuration -> SD Card Configuration -> SD/MMC Speed Mode -> High Speed 
 
 # Using the EON Model
 
