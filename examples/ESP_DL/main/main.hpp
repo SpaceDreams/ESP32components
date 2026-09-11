@@ -50,7 +50,7 @@ record_struct streameddata;
 SemaphoreHandle_t finishedSaving;// Used to tell the main app that saving audio data is finished.
 
 void SampleAudioTask(void *ArgPointer){
-        sample_audio(&ArgPointer);
+        sample_audio(ArgPointer);
         vTaskDelete(NULL);
 }
 

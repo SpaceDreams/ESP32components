@@ -18,33 +18,33 @@ constexpr uint8_t DIM2LIN(std::initializer_list<int> Sizes,std::initializer_list
 
 
 // Transform Configuration
-dl::audio::SpeechFeatureConfig config;
-dl::audio::Fbank transform(config);
+dl::audio::Fbank * transform=nullptr;
 float transformoutput[DIM2LIN(STRIDESHAPE,{-1, -1},2)];
 //transformoutput is bigger than what's needed for the first iteration, so here I set an offset:
 int offset = DIM2LIN(STRIDESHAPE,{-1, -1},2) - DIM2LIN(INITSTRIDESHAPE,{-1, -1},2);
 int8_t init_count=0;
 //Model Configuration
 // The symbol name is composed of three parts: prefix "_binary_", filename "signaldect_espdl", and suffix "_start"
-extern const uint8_t model_espdl[] asm("_binary_signaldect_espdl_start"); //
-// Basic usage - loads model with default parameters
-dl::Model *model = new dl::Model((const char *)model_espdl, fbs::MODEL_LOCATION_IN_FLASH_RODATA);
+extern const uint8_t model_espdl[] asm("_binary_signaldect_2d_espdl_start"); //
+dl::Model *model = nullptr;
 // Assigns the first 
-std::map<std::string, dl::TensorBase *> model_inputs = model->get_inputs();
-dl::TensorBase *model_input = model_inputs.begin()->second;
-std::map<std::string, dl::TensorBase *> model_outputs = model->get_outputs();
-dl::TensorBase *model_output = model_outputs.begin()->second;
-
+dl::TensorBase *model_input = nullptr;
+dl::TensorBase *model_output = nullptr;
 
 // not sure the best way to handle the overlap; here I just make an array
 float overlapbuff[WINDOWSTRIDE+OVERLAP];
 void inittransform(float * input, float * output){
+    // Verify input/output buffers are non-null
+    if (overlapbuff == nullptr || transform == nullptr) {
+        ESP_LOGE("AUDIO", "Audio feature buffers are NULL!");
+        return;
+    }
     memcpy(overlapbuff,&input[WINDOWSTRIDE-OVERLAP],OVERLAP*sizeof(input[0]));
-    transform.process(input, WINDOWSTRIDE, output);
+    transform->process(input, WINDOWSTRIDE, output);
 }
 void slicetransform(float * input, float * output){
 	memcpy(&overlapbuff[OVERLAP],input,WINDOWSTRIDE*sizeof(input[0]));
-    transform.process(overlapbuff, WINDOWSTRIDE+OVERLAP, output);
+    transform->process(overlapbuff, WINDOWSTRIDE+OVERLAP, output);
     memmove(overlapbuff,&overlapbuff[WINDOWSTRIDE],OVERLAP*sizeof(overlapbuff[0]));
 }
 
@@ -118,17 +118,18 @@ void apply_softmax(const float* input, int size, float* output) {
 // 2. Main processing function for the ESP-DL Output Tensor
 void dequantize_model_output(float * probabilities) {
     // Get the basic details of the output tensor
-    int total_elements = model_outputs->get_size();
+    int total_elements = model_output->get_size();
+    float scale = DL_SCALE(model_output->exponent);
     
     // Cast the raw array pointer (Use int8_t* since the model is quantized to 8-bits)
-    int8_t* raw_output_ptr = (int8_t*)model_outputs->get_element_ptr();
+    int8_t* raw_output_ptr = (int8_t*)model_output->get_element_ptr();
 
     // Allocate arrays for calculation
     float dequantized_logits[total_elements];
 
     // Dequantize integers
     for (int i = 0; i < total_elements; i++) 
-    	dequantized_logits[i]  = dl::dequantize(raw_output_ptr[i], DL_SCALE(model_outputs->exponent));
+    	dequantized_logits[i]  = dl::dequantize(raw_output_ptr[i], scale);
 
     // Apply post-processing Softmax
     apply_softmax(dequantized_logits, total_elements, probabilities);
@@ -138,6 +139,8 @@ void dequantize_model_output(float * probabilities) {
 
 void run_classifier_init(){
 	/** Audio buffers, pointers and selectors **/
+    // Transform Configuration
+    dl::audio::SpeechFeatureConfig config;
 	config.sample_rate = SAMPLE_RATE;
 	config.frame_length = FRAME_LENGTH;  // ms
 	config.frame_shift = FRAME_SHIFT;   // ms
@@ -147,6 +150,15 @@ void run_classifier_init(){
 	config.window_type = dl::audio::WinType::HAMMING;
 	//config.dither=0.0;
 	//config.preemphasis_coefficient=0.0;
+    transform = new dl::audio::Fbank(config);
+
+    // Basic usage - loads model with default parameters
+    model = new dl::Model((const char *)model_espdl, fbs::MODEL_LOCATION_IN_FLASH_RODATA);
+    // Assigns the first element from the map
+    std::map<std::string, dl::TensorBase *> model_inputs = model->get_inputs();
+    model_input = model_inputs.begin()->second;
+    std::map<std::string, dl::TensorBase *> model_outputs = model->get_outputs();
+    model_output = model_outputs.begin()->second;
 }
 
 void run_classifier_continuous(float * input, float *output)
