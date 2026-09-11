@@ -1,4 +1,4 @@
-idf_component_register(SRCS "main.cpp"
+idf_component_register(SRCS "main.cpp" "ESPDL.cpp"
                        REQUIRES initI2S helperfuncs espressif__esp-dl
 		       PRIV_REQUIRES nvs_flash
                       )

@@ -25,5 +25,4 @@ void sample_audio(void *ArgPointer)
     i2s_channel_disable(rx_handle);
     /* If the handle is not needed any more, delete it to release the channel resources */
     i2s_del_channel(rx_handle);
-    vTaskDelete(NULL);
 }

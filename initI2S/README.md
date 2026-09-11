@@ -5,7 +5,9 @@ For the ESP32s3 CRB Board the [ICS-43432](https://product.tdk.com/system/files/d
 
 pinout is found [here](https://documentation.espressif.com/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf)
 
-The LR Pin is OV which represents Left. According to the schematic it is connected to a solder joint whose default pin is ground. It can be configured for 2.8V to represent right.
+The LR Pin is OV which represents Left. According to the schematic it is connected to a solder joint whose default pin is ground. It can be configured for 2.8V to represent right. 
+
+To use integers to assign GPIO values include the library: `#include "driver/gpio.h"` or; if that fails use the notation: `GPIO_NUM_` so for pin 14: `GPIO_NUM_14`
 
 ## Data Word Length
 The output data word length is 24 bits per channel. This is inside a 32 bit Slot structure.
@@ -26,4 +28,14 @@ dma_desc_num > polling_cycle / interrupt_interval
 recv_buffer_size > dma_desc_num * dma_max_buffer_size
 ```
 1) [Note:](https://docs.espressif.com/projects/esp-idf/en/v6.0.1/esp32s3/api-reference/peripherals/i2s.html#std-rx-mode) for a 24 bit ADC, `dma_frame_num`, `recv_buffer_size` and `mclk_multiple` should be a multiple of 3
+
+## How To include this function in a task
+
+Wrap a function around it in your local script:
+```
+void SampleAudioTask(void *ArgPointer){
+        sample_audio(ArgPointer)
+        vTaskDelete(NULL);
+}
+```
 

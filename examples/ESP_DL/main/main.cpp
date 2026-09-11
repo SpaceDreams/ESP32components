@@ -2,11 +2,11 @@
 
 #include "main.hpp"
 
+
 static const char *TAG = "ESP-DL Testing";
 
 extern "C" bool audio_callback(uint8_t* raw_buffer, size_t n_bytes, struct sampleArgs* Args)
 {  // There is a catch here; i2s is 24 bit; so 
-    bool buf_ready = false;
     bool keep_reading_i2s = true;
     for (int i = 0; i < n_bytes/3; i++) {
         uint32_t packed_data = 0;
@@ -15,7 +15,6 @@ extern "C" bool audio_callback(uint8_t* raw_buffer, size_t n_bytes, struct sampl
         // Perform Sign Extension (Crucial for negative sound wave numbers)
         // A 24-bit signed number has its sign bit at bit position 23.
         // If bit 23 is a 1, the number is negative, and we must fill the top 8 bits with 1s.
-        float signfunc = 1;
         if (packed_data & 0x00800000)
                 packed_data |= 0xFF000000; // Force top byte to be negative padding
         int32_t res = static_cast<int32_t>(packed_data);//Cast to a signed int first then float
@@ -24,20 +23,20 @@ extern "C" bool audio_callback(uint8_t* raw_buffer, size_t n_bytes, struct sampl
         if(streameddata.buf_count >= streameddata.n_samples) {
             streameddata.buf_select ^= 1;
             streameddata.buf_count = 0;
-            buf_ready = true;
             xSemaphoreGive(streameddata.buf_ready);
-            streameddata.swapped_buffers_count++;
+            // Safely increment by 1 across any CPU core
+            atomic_fetch_add(&streameddata.swapped_buffers_count, 1);;
         }
     }
     // Save here
-    FILE* f = Args->rec_file
+    FILE* f = Args->rec_file;
     size_t dumvar = n_bytes;
-    if(dumvar > totsamples*sizeof(raw_buffer[0])){
-        dumvar = (totsamples - rec_samples)*sizeof(raw_buffer[0]);
+    if(dumvar > TOTSAMPLES*sizeof(raw_buffer[0])){
+        dumvar = (TOTSAMPLES - streameddata.rec_samples)*sizeof(raw_buffer[0]);
         keep_reading_i2s = false;// Done Reading I2S
     }
     fwrite(raw_buffer, sizeof(raw_buffer[0]), dumvar, f);
-    rec_samples += dumvar/sizeof(raw_buffer[0]);
+    streameddata.rec_samples += dumvar/sizeof(raw_buffer[0]);
     // Close file if I do not keep reading I2S
     if(!keep_reading_i2s){
             fclose(f);
@@ -48,13 +47,11 @@ extern "C" bool audio_callback(uint8_t* raw_buffer, size_t n_bytes, struct sampl
 }
 
 bool microphone_start(uint32_t n_samples, FILE* f)
-{
-    streameddata.buffers[0] = (float *)calloc(n_samples, sizeof(float));
-    streameddata.buffers[1] = (float *)calloc(n_samples, sizeof(float));
+{   
+    streameddata.rec_samples = 0;
     streameddata.buf_select = 0;
     streameddata.buf_count = 0;
     streameddata.n_samples = n_samples;
-    //streameddata.buf_ready = 0;
     streameddata.buf_ready = xSemaphoreCreateBinary();
     finishedSaving = xSemaphoreCreateBinary();
     if (streameddata.buf_ready == NULL || finishedSaving == NULL ) {
@@ -68,9 +65,9 @@ bool microphone_start(uint32_t n_samples, FILE* f)
         .rec_file = f
          };
     xTaskCreatePinnedToCore(
-        sample_audio,            // Task function
+        SampleAudioTask,            // Task function
         "Sample_I2S_data",       // Task name
-        10000,                 // Max Bytes required for task // DMA buffer and sample buffer don't count since they were allocated at the program startup
+        3000,                 // Max Dyanmic Bytes required for task, static bytes are pre-allocated
         &myArgs,              // Pointer to your struct of arguments
         1,                    // Task priority
         NULL,                 // Task handle
@@ -130,93 +127,67 @@ extern "C" void app_main(){
     int32_t boot_counter = 0;
     nvs_handle_t my_handle = get_counter(&boot_counter);
     const char *classification_cases[] = {"faucet_off","faucet_on","faucet_onoff"};
-    int length = snprintf(NULL, 0, "faucetfile_16bit_%s.wav", classification_cases[boot_counter]);
+    int length = snprintf(NULL, 0, "faucetfile_16bit_%s_espdl.wav", classification_cases[boot_counter]);
     char *wavfilename = (char *)malloc((length + 1)* sizeof(char));
-    snprintf(wavfilename, length + 1, "faucetfile_16bit_%s.wav", classification_cases[boot_counter]);
+    snprintf(wavfilename, length + 1, "faucetfile_16bit_%s_espdl.wav", classification_cases[boot_counter]);
 
     // Here I am opening the file and creating the name:
     const char *mount_point = mount_sdcard();
-    FILE* rec_file = init_wavfile(rec_time, wavfilename);
+    FILE* rec_file = init_wavfile(REC_TIME, wavfilename);
     // summary of inferencing settings (from model_metadata.h)
     printf("Transform settings:\n");
     printf("\tInterval: ");
-    printf_float((float)WindowSamples/(INIT_AUDIO_SAMPLE_RATE/1000));
+    printf_float((float)WINDOWSAMPLES/(INIT_AUDIO_SAMPLE_RATE/1000));
     printf(" ms.\n");
-    printf("\tStride: %d ms.\n", WindowStride / (INIT_AUDIO_SAMPLE_RATE/1000));
+    printf("\tStride: %d ms.\n", WINDOWSTRIDE / (INIT_AUDIO_SAMPLE_RATE/1000));
 
-    // Once the model is created, the input and output memory is allocated.
-    dl::Model *model = new dl::Model((const char *)model_espdl, fbs::MODEL_LOCATION_IN_FLASH_RODATA);
-
-    std::map<std::string, dl::TensorBase *> model_inputs = model->get_inputs();
-    dl::TensorBase *model_input = model_inputs.begin()->second;
-    std::map<std::string, dl::TensorBase *> model_outputs = model->get_outputs();
-    dl::TensorBase *model_output = model_outputs.begin()->second;
-
-    if (microphone_start(WindowStride,rec_file) == false) {
-        printf("ERR: Could not allocate audio buffer (size %d), this could be due to the window length of your model\r\n", EI_CLASSIFIER_RAW_SAMPLE_COUNT);
+    // Here I am creating variables for saving the classifications:
+    float classification_results[TOT_CLASSIFICATIONS][CLASSIFIER_LABEL_COUNT];
+    uint32_t curr_classifications = 0;
+    const char* const class_labels[] = CLASSIFIER_LABELS;
+    uint32_t curr_samples =0;
+    
+    // Now I can start the microphone and start recording
+    if (microphone_start(WINDOWSTRIDE,rec_file) == false) {
+        ESP_LOGE(TAG, "Issue starting microphone");
         return;
     }
-    // I have to initalize the transform first, the first transform is a little different than all the rest
-    if (xSemaphoreTake(streameddata.buf_ready, portMAX_DELAY) != pdTRUE) continue;
-    if (streameddata.swapped_buffers_count > 1)
-        ESP_LOGE(TAG, "Data missed! Buffer was swapped %d times before reading!", streameddata.swapped_buffers_count);
-    streameddata.swapped_buffers_count = 0; 
-    float transformoutput[1][firststrideshape[0]][firststrideshape[1]];
-    transform.process(streameddata.buffers[!streameddata.buf_select], WindowStride, transformoutput[0]);
-    float buffcopy[WindowStride+overlap]
-    memcpy(buffcopy,&streameddata.buffers[!streameddata.buf_select][WindowStride-overlap],
-           overlap*sizeof(streameddata.buffers[!streameddata.buf_select][0]));
-    dl::TensorBase *transform_tensor = new dl::TensorBase({1, firststrideshape[0],firststrideshape[1]}, nullptr, 0, dl::DATA_TYPE_FLOAT);
-    transform_tensor->set_element_ptr(transformoutput);
-    dl::TensorBase *transposed_tensor = dl::transpose(transform_tensor, {1,3,2});
-    model_tensor->push(transposed_tensor, 1);
-    uint32_t curr_samples = WindowStride;
-    size_t offset = firststrideshape[0];
-    float transformoutput[1][strideshape[0]][strideshape[1]];
+
     // now I can loop through everything and it's the same
-    while(curr_samples<totsamples)
+    while(curr_samples<TOTSAMPLES)
     {
         if (xSemaphoreTake(streameddata.buf_ready, portMAX_DELAY) != pdTRUE) continue;
-        if (streameddata.swapped_buffers_count > 1)
-            ESP_LOGE(TAG, "Data missed! Buffer was swapped %d times before reading!", streameddata.swapped_buffers_count);
+        uint32_t total_events = atomic_exchange(&streameddata.swapped_buffers_count, 0);
+        if (total_events > 1)
+            ESP_LOGE(TAG, "Data missed! Buffer was swapped %d times before reading!", total_events);
         streameddata.swapped_buffers_count = 0; 
-        memcpy(&buffcopy[overlap],&streameddata.buffers[!streameddata.buf_select],
-           WindowStride*sizeof(streameddata.buffers[!streameddata.buf_select][0]));
-        fbank.process(buffcopy, WindowStride+overlap, transformoutput);
-        offset = strideshape[0];
-        memcpy(buffcopy,&streameddata.buffers[!streameddata.buf_select][WindowStride-overlap],
-           overlap*sizeof(streameddata.buffers[!streameddata.buf_select][0]));
-        dl::TensorBase *transform_tensor = new dl::TensorBase({1, strideshape[0],strideshape[1]}, nullptr, 0, dl::DATA_TYPE_FLOAT);
-        transform_tensor->set_element_ptr(transformoutput);
-        dl::TensorBase *transposed_tensor = dl::transpose(transform_tensor, {1,3,2});
-        model_tensor->push(transposed_tensor, 1);
-        if (curr_samples<WindowSamples) continue;
-        model_input->assign(model_tensor);
-        model->run();
-        curr_samples += WindowStride;
-        process_model_output(model_output, classification_results[curr_classifications])
+        run_classifier_continuous(streameddata.buffers[!streameddata.buf_select], classification_results[curr_classifications]);
+        curr_samples += WINDOWSTRIDE;
+        if (curr_samples<WINDOWSTRIDE) continue;
         curr_classifications++;
-        if (curr_classifications> totnum_classifications)
-            ESP_LOGI(TAG, "Predicted the Wrong number of Classifications");
     }
     if(xSemaphoreTake(finishedSaving, portMAX_DELAY) != pdTRUE) ESP_LOGI(TAG, "Took too long to finish Saving");
     // Create the filename for the predictions
-    length = snprintf(NULL, 0, "inference_logs_16bit_%s.txt", classification_cases[boot_counter]);
+    length = snprintf(NULL, 0, "inference_logs_16bit_%s_espdl.txt", classification_cases[boot_counter]);
     char *inferencefilename = (char *)malloc((length + 1)* sizeof(char));
-    snprintf(inferencefilename, length + 1, "inference_logs_16bit_%s.txt", classification_cases[boot_counter]);
+    snprintf(inferencefilename, length + 1, "inference_logs_16bit_%s_espdl.txt", classification_cases[boot_counter]);
     FILE* inference_logs = init_file(inferencefilename);
+
     // save the predictions
-    for (int i = 0; i<totnum_classifications; i++)
+    uint16_t classifiertotals[TOT_CLASSIFICATIONS]={0};
+    for (int i = 0; i<TOT_CLASSIFICATIONS; i++)
     {
-        fprintf(inference_logs,"at %ld ms.:\nPredictions (DSP: %ld ms., Classification: %ld ms.): \n",
-                timing_results[i][0], timing_results[i][1], timing_results[i][2]);
-        for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) 
-            fprintf(inference_logs, "    %s: %f\n", result.classification[ix].label, classification_results[i][ix]);
+        fprintf(inference_logs,"at %ld ms.:\nPredictions: \n",
+                (uint32_t)(i*WINDOWSTRIDE + WINDOWSAMPLES)/(INIT_AUDIO_SAMPLE_RATE/1000));
+        for (size_t ix = 0; ix < CLASSIFIER_LABEL_COUNT; ix++) {
+            fprintf(inference_logs, "    %s: %f\n", class_labels[ix], classification_results[i][ix]);
+            if(classification_results[i][ix]>0.8) classifiertotals[ix]++;
+        }
     }
     // Save the totals:
-    for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++)
+    for (size_t ix = 0; ix < CLASSIFIER_LABEL_COUNT; ix++)
                 fprintf(inference_logs, "Total Classification Probabilities above 0.8    %s: %d\n", 
-                        result.classification[ix].label, classifiertotals[ix]);
+                        class_labels[ix], classifiertotals[ix]);
     // Done Saving Predictions
     fclose(inference_logs);
     ESP_LOGI(TAG, "Classification Data Saved");
