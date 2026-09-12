@@ -26,23 +26,24 @@ extern "C" bool audio_callback(uint8_t* raw_buffer, size_t n_bytes, struct sampl
             // Safely increment by 1 across any CPU core
             atomic_fetch_add(&streameddata.swapped_buffers_count, 1);
             xSemaphoreGive(streameddata.buf_ready);
-            if(streameddata.CompletedSaving)
+            if(streameddata.CompletedSaving){
                 keep_reading_i2s = false;
+                xSemaphoreGive(ShutDownI2S);
+            }
         }
     }
     // Save here
     FILE* f = Args->rec_file;
     size_t dumvar = n_bytes;
     if(!streameddata.CompletedSaving){
-        if((streameddata.rec_samples+dumvar/sizeof(raw_buffer[0]) > TOTSAMPLES)){
-            dumvar = (TOTSAMPLES - streameddata.rec_samples)*sizeof(raw_buffer[0]);
+        if((streameddata.rec_samples+dumvar/3) > TOTSAMPLES){
+            dumvar = (TOTSAMPLES - streameddata.rec_samples)*3;
             streameddata.CompletedSaving = true;// Done saving
         }
         fwrite(raw_buffer, sizeof(raw_buffer[0]), dumvar, f);
-        streameddata.rec_samples += dumvar/sizeof(raw_buffer[0]);
+        streameddata.rec_samples += dumvar/3;
         if(streameddata.CompletedSaving){
             fclose(f);
-            xSemaphoreGive(finishedSaving);
             ESP_LOGI(TAG, "I2S Data Saved; file closed.");
         }
     }
@@ -58,8 +59,8 @@ bool microphone_start(uint32_t n_samples, FILE* f)
     streameddata.n_samples = n_samples;
     streameddata.CompletedSaving = false;
     streameddata.buf_ready = xSemaphoreCreateBinary();
-    finishedSaving = xSemaphoreCreateBinary();
-    if (streameddata.buf_ready == NULL || finishedSaving == NULL ) {
+    ShutDownI2S = xSemaphoreCreateBinary();
+    if (streameddata.buf_ready == NULL || ShutDownI2S == NULL ) {
         ESP_LOGE(TAG, "\nFailed to create semaphore!");
         return false;
     }
@@ -72,7 +73,7 @@ bool microphone_start(uint32_t n_samples, FILE* f)
     xTaskCreatePinnedToCore(
         SampleAudioTask,            // Task function
         "Sample_I2S_data",       // Task name
-        3000,                 // Max Dyanmic Bytes required for task, static bytes are pre-allocated
+        10000,                 // Max Dyanmic Bytes required for task, static bytes are pre-allocated
         &myArgs,              // Pointer to your struct of arguments
         1,                    // Task priority
         NULL,                 // Task handle
@@ -131,6 +132,7 @@ extern "C" void app_main(){
     // This is for setting up multiple cases:
     int32_t boot_counter = 0;
     nvs_handle_t my_handle = get_counter(&boot_counter);
+    boot_counter = boot_counter%3;//This is the number of cases; this way I don't have to reset the flash after 3 boots
     const char *classification_cases[] = {"faucet_off","faucet_on","faucet_onoff"};
     int length = snprintf(NULL, 0, "faucetfile_16bit_%s_espdl.wav", classification_cases[boot_counter]);
     char *wavfilename = (char *)malloc((length + 1)* sizeof(char));
@@ -175,7 +177,7 @@ extern "C" void app_main(){
         curr_classifications++;
     }
     ESP_LOGI(TAG, "Completed Modeling");
-    if(xSemaphoreTake(finishedSaving, portMAX_DELAY) != pdTRUE) ESP_LOGI(TAG, "Took too long to finish Saving");
+    if(xSemaphoreTake(ShutDownI2S, portMAX_DELAY) != pdTRUE) ESP_LOGI(TAG, "Took too long to finish Shutting Down I2S");
     // Create the filename for the predictions
     length = snprintf(NULL, 0, "inference_logs_16bit_%s_espdl.txt", classification_cases[boot_counter]);
     char *inferencefilename = (char *)malloc((length + 1)* sizeof(char));

@@ -27,8 +27,8 @@
 
 // Saving data:
 #define REC_TIME            10 // seconds
-#define TOTSAMPLES          REC_TIME*WINDOWSAMPLES
-#define TOT_CLASSIFICATIONS    (TOTSAMPLES - WINDOWSAMPLES)/WINDOWSTRIDE + 1
+#define TOTSAMPLES          (REC_TIME*SAMPLE_RATE)
+#define TOT_CLASSIFICATIONS    (TOTSAMPLES - WINDOWSAMPLES)/(WINDOWSTRIDE) + 1
 
 
 #include "ESPDL.hpp"
@@ -48,7 +48,7 @@ typedef struct { // To save space this buffer takes bytes; this way the 3 byte m
     bool CompletedSaving;
 } record_struct;
 record_struct streameddata;
-SemaphoreHandle_t finishedSaving;// Used to tell the main app that saving audio data is finished.
+SemaphoreHandle_t ShutDownI2S;// Used to tell the main app that I2S is shutting down.
 
 void SampleAudioTask(void *ArgPointer){
         sample_audio(ArgPointer);

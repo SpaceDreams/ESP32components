@@ -26,7 +26,7 @@ dl::audio::Fbank * transform=nullptr;
 static float transformoutput[(STRIDESHAPE_X)*(STRIDESHAPE_Y)];
 //transformoutput is bigger than what's needed for the first iteration, so here I set an offset:
 static size_t offset = (STRIDESHAPE_X)*(STRIDESHAPE_Y) - (INITSTRIDESHAPE_X)*(INITSTRIDESHAPE_Y);
-static int8_t init_count=0;
+static int32_t init_count=0;
 // not sure the best way to handle the overlap; here I just make an array
 static float overlapbuff[WINDOWSTRIDE+OVERLAP];
 //Model Configuration
@@ -91,16 +91,17 @@ void shift_and_quantize_direct(const float *input, uint16_t *input_shape) {
     int8_t *write_ptr = &tensor_ptr[shiftsize];
     // DIM2LIN(input_shape,{-1,-1},2) = input_shape[1]-1 + input_shape[1]*(input_shape[0]-1)
     int16_t dim2lin = input_shape[1]*input_shape[0]-1;
-    for (size_t i = 0; i < dim2lin; i++)
-            write_ptr[i] = dl::quantize<int8_t>(normalize(input[i]), scale);
+    for (size_t i = 0; i < dim2lin; i++){
+        write_ptr[i] = dl::quantize<int8_t>(normalize(input[i]), scale);
+    }
 }
 
 // 1. Numerically stable Softmax function
 void apply_softmax(const float* input, int size, float* output) {
-    // Find the maximum value to prevent float exponential overflow
+    // Find the absolute maximum value to prevent float exponential overflow
     float max_val = input[0];
     for (int i = 1; i < size; i++) {
-        if (input[i] > max_val) {
+        if (fabsf(input[i]) > fabsf(max_val)) {
             max_val = input[i];
         }
     }
@@ -111,6 +112,7 @@ void apply_softmax(const float* input, int size, float* output) {
         output[i] = expf(input[i] - max_val);
         sum += output[i];
     }
+    printf("\n");
 
     // Normalize elements to sum up to 1.0 (100%)
     for (int i = 0; i < size; i++) {
@@ -131,8 +133,8 @@ void dequantize_model_output(float * probabilities) {
     float dequantized_logits[total_elements];
 
     // Dequantize integers
-    for (int i = 0; i < total_elements; i++) 
-    	dequantized_logits[i]  = dl::dequantize(raw_output_ptr[i], scale);
+    for (int i = 0; i < total_elements; i++)
+        dequantized_logits[i]  = dl::dequantize(raw_output_ptr[i], scale);
 
     // Apply post-processing Softmax
     apply_softmax(dequantized_logits, total_elements, probabilities);
@@ -184,13 +186,13 @@ void run_classifier_continuous(float * input, float *output)
 		slicetransform(input,pnt2transformoutput);
 	}
 	shift_and_quantize_direct(pnt2transformoutput,shape);
-	if (init_count>WINDOWSAMPLES/WINDOWSTRIDE)
+	if (init_count>=WINDOWSAMPLES)
 	{
 		model->run();
 		dequantize_model_output(output);
-        ESP_LOGI(TAG,"Modeling Result %f and %f",output[0],output[1]);
+        printf("Faucet Off: %f Faucet On: %f",output[0],output[1]);
     
 	}
 	else
-		init_count++;
+		init_count += WINDOWSTRIDE;
 }
