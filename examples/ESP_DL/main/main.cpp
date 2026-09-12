@@ -23,35 +23,40 @@ extern "C" bool audio_callback(uint8_t* raw_buffer, size_t n_bytes, struct sampl
         if(streameddata.buf_count >= streameddata.n_samples) {
             streameddata.buf_select ^= 1;
             streameddata.buf_count = 0;
-            xSemaphoreGive(streameddata.buf_ready);
             // Safely increment by 1 across any CPU core
-            atomic_fetch_add(&streameddata.swapped_buffers_count, 1);;
+            atomic_fetch_add(&streameddata.swapped_buffers_count, 1);
+            xSemaphoreGive(streameddata.buf_ready);
+            if(streameddata.CompletedSaving)
+                keep_reading_i2s = false;
         }
     }
     // Save here
     FILE* f = Args->rec_file;
     size_t dumvar = n_bytes;
-    if(dumvar > TOTSAMPLES*sizeof(raw_buffer[0])){
-        dumvar = (TOTSAMPLES - streameddata.rec_samples)*sizeof(raw_buffer[0]);
-        keep_reading_i2s = false;// Done Reading I2S
-    }
-    fwrite(raw_buffer, sizeof(raw_buffer[0]), dumvar, f);
-    streameddata.rec_samples += dumvar/sizeof(raw_buffer[0]);
-    // Close file if I do not keep reading I2S
-    if(!keep_reading_i2s){
-            fclose(f);
-            ESP_LOGI(TAG, "I2S Data Saved; file closed.");
-            xSemaphoreGive(finishedSaving);
+    if(!streameddata.CompletedSaving){
+        if((streameddata.rec_samples+dumvar/sizeof(raw_buffer[0]) > TOTSAMPLES)){
+            dumvar = (TOTSAMPLES - streameddata.rec_samples)*sizeof(raw_buffer[0]);
+            streameddata.CompletedSaving = true;// Done saving
         }
+        fwrite(raw_buffer, sizeof(raw_buffer[0]), dumvar, f);
+        streameddata.rec_samples += dumvar/sizeof(raw_buffer[0]);
+        if(streameddata.CompletedSaving){
+            fclose(f);
+            xSemaphoreGive(finishedSaving);
+            ESP_LOGI(TAG, "I2S Data Saved; file closed.");
+        }
+    }
     return keep_reading_i2s;
 }
 
 bool microphone_start(uint32_t n_samples, FILE* f)
 {   
+    memset(streameddata.buffers, 0, sizeof(streameddata.buffers));
     streameddata.rec_samples = 0;
     streameddata.buf_select = 0;
     streameddata.buf_count = 0;
     streameddata.n_samples = n_samples;
+    streameddata.CompletedSaving = false;
     streameddata.buf_ready = xSemaphoreCreateBinary();
     finishedSaving = xSemaphoreCreateBinary();
     if (streameddata.buf_ready == NULL || finishedSaving == NULL ) {
@@ -152,7 +157,11 @@ extern "C" void app_main(){
         ESP_LOGE(TAG, "Issue starting microphone");
         return;
     }
-
+    // Now I can start the classifier
+    if (run_classifier_init() == false) {
+        ESP_LOGE(TAG, "Issue starting microphone");
+        return;
+    }
     // now I can loop through everything and it's the same
     while(curr_samples<TOTSAMPLES)
     {
@@ -160,12 +169,12 @@ extern "C" void app_main(){
         uint32_t total_events = atomic_exchange(&streameddata.swapped_buffers_count, 0);
         if (total_events > 1)
             ESP_LOGE(TAG, "Data missed! Buffer was swapped %d times before reading!", total_events);
-        streameddata.swapped_buffers_count = 0; 
-        run_classifier_continuous(streameddata.buffers[!streameddata.buf_select], classification_results[curr_classifications]);
+        run_classifier_continuous(streameddata.buffers[streameddata.buf_select^1], classification_results[curr_classifications]);
         curr_samples += WINDOWSTRIDE;
-        if (curr_samples<WINDOWSTRIDE) continue;
+        if (curr_samples<WINDOWSAMPLES) continue;
         curr_classifications++;
     }
+    ESP_LOGI(TAG, "Completed Modeling");
     if(xSemaphoreTake(finishedSaving, portMAX_DELAY) != pdTRUE) ESP_LOGI(TAG, "Took too long to finish Saving");
     // Create the filename for the predictions
     length = snprintf(NULL, 0, "inference_logs_16bit_%s_espdl.txt", classification_cases[boot_counter]);

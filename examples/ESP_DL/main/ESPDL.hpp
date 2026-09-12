@@ -29,4 +29,4 @@
 #define CLASSIFIER_LABELS      {"Faucet is Off", "Faucet is On"}
 
 void run_classifier_continuous(float * input, float *output);
-void run_classifier_init();
+bool run_classifier_init();

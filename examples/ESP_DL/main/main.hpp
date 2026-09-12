@@ -26,7 +26,7 @@
 #define WINDOWSTRIDE        WINDOWSAMPLES/4 //The minimum number is (frame_length*Sample_Rate)
 
 // Saving data:
-#define REC_TIME            60 // seconds
+#define REC_TIME            10 // seconds
 #define TOTSAMPLES          REC_TIME*WINDOWSAMPLES
 #define TOT_CLASSIFICATIONS    (TOTSAMPLES - WINDOWSAMPLES)/WINDOWSTRIDE + 1
 
@@ -45,6 +45,7 @@ typedef struct { // To save space this buffer takes bytes; this way the 3 byte m
     unsigned int n_samples;
     volatile atomic_uint_fast32_t  swapped_buffers_count; // Increments every time data is written
     uint32_t rec_samples;
+    bool CompletedSaving;
 } record_struct;
 record_struct streameddata;
 SemaphoreHandle_t finishedSaving;// Used to tell the main app that saving audio data is finished.

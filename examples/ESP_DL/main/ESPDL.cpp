@@ -1,10 +1,14 @@
 
 #include "ESPDL.hpp"
-#define GET_transformshape(framesamples) {NUM_MEL_BINS, (framesamples-(FRAME_LENGTH*SAMPLE_RATE))/(FRAME_SHIFT*SAMPLE_RATE)+1} 
+#define GET_transformXsize(framesamples) ((framesamples)-(FRAME_LENGTH))/(FRAME_SHIFT)+1
 #define OVERLAP           (FRAME_LENGTH-FRAME_SHIFT)*(WINDOWSAMPLES/1000)
-#define INITSTRIDESHAPE   GET_transformshape(WINDOWSTRIDE)
-#define STRIDESHAPE       GET_transformshape(WINDOWSTRIDE+OVERLAP)
+#define INITSTRIDESHAPE_X   GET_transformXsize(WINDOWSTRIDE/(WINDOWSAMPLES/1000))
+#define STRIDESHAPE_X       GET_transformXsize(WINDOWSTRIDE/(WINDOWSAMPLES/1000)+FRAME_LENGTH-FRAME_SHIFT)
+#define INITSTRIDESHAPE_Y   NUM_MEL_BINS
+#define STRIDESHAPE_Y       NUM_MEL_BINS
  
+static const char *TAG = "ESP-DL";
+
 constexpr uint8_t DIM2LIN(std::initializer_list<int> Sizes,std::initializer_list<int> idx,size_t num) {
 	const int* i = idx.begin();
     const int* N = Sizes.begin();
@@ -19,10 +23,12 @@ constexpr uint8_t DIM2LIN(std::initializer_list<int> Sizes,std::initializer_list
 
 // Transform Configuration
 dl::audio::Fbank * transform=nullptr;
-float transformoutput[DIM2LIN(STRIDESHAPE,{-1, -1},2)];
+static float transformoutput[(STRIDESHAPE_X)*(STRIDESHAPE_Y)];
 //transformoutput is bigger than what's needed for the first iteration, so here I set an offset:
-int offset = DIM2LIN(STRIDESHAPE,{-1, -1},2) - DIM2LIN(INITSTRIDESHAPE,{-1, -1},2);
-int8_t init_count=0;
+static size_t offset = (STRIDESHAPE_X)*(STRIDESHAPE_Y) - (INITSTRIDESHAPE_X)*(INITSTRIDESHAPE_Y);
+static int8_t init_count=0;
+// not sure the best way to handle the overlap; here I just make an array
+static float overlapbuff[WINDOWSTRIDE+OVERLAP];
 //Model Configuration
 // The symbol name is composed of three parts: prefix "_binary_", filename "signaldect_espdl", and suffix "_start"
 extern const uint8_t model_espdl[] asm("_binary_signaldect_2d_espdl_start"); //
@@ -31,14 +37,7 @@ dl::Model *model = nullptr;
 dl::TensorBase *model_input = nullptr;
 dl::TensorBase *model_output = nullptr;
 
-// not sure the best way to handle the overlap; here I just make an array
-float overlapbuff[WINDOWSTRIDE+OVERLAP];
 void inittransform(float * input, float * output){
-    // Verify input/output buffers are non-null
-    if (overlapbuff == nullptr || transform == nullptr) {
-        ESP_LOGE("AUDIO", "Audio feature buffers are NULL!");
-        return;
-    }
     memcpy(overlapbuff,&input[WINDOWSTRIDE-OVERLAP],OVERLAP*sizeof(input[0]));
     transform->process(input, WINDOWSTRIDE, output);
 }
@@ -68,28 +67,32 @@ float normalize(float x){
 
 
 void shift_and_quantize_direct(const float *input, uint16_t *input_shape) {
+    /** Example Shifting:
+     * x={{1,2,3},{4,5,6},{7,8,9}}
+     * input = {8,9,10} \\ only considering the case where rows are different but columns are always the same
+     * newx = {{4,5,6},{7,8,9},{8,9,10}}
+     * inputshape = {1,3}
+     * xshape = {3,3}
+     * Since the columns of the input are equal to the columns of x and c is column major then I have:
+     * newx = memmove(x,&x[flatten(inputshape)],(flatten(xshape)-flatten(inputshape))*size(x[0]))
+     * flatten(xshape)=xshape[0]*xshape[1]
+     * flatten(inputshape) = inputshape[0]*inputshape[1]
+     * **/
 	const std::vector<int> shape = model_input->get_shape();
 
     int8_t *tensor_ptr = (int8_t *)model_input->get_element_ptr();
     float scale = DL_RESCALE(model_input->exponent);
-
     // 1. Shift old quantized tensor data left
-    int8_t shiftsize = shape[3]-input_shape[1];
-    for (int i = 0; i < shape[3]; i++){
-    	//DIM2LIN(shape,{0,0,i,0},4)=shape[3]*i
-    	int8_t *start = &tensor_ptr[shape[3]*i];
-    	//DIM2LIN(shape,{0,0,i,shiftsize},4)=shape[3]*i+shiftsize
-    	int8_t *shiftedblock = &tensor_ptr[shape[3]*i+shiftsize];
-        memmove(&start, &shiftedblock, shiftsize * sizeof(tensor_ptr[0]));
-    }
-
+    size_t shiftpoint = input_shape[0]*input_shape[1];
+    size_t shiftsize = shape[1]*shape[2] - shiftpoint;
+    memmove(tensor_ptr, &tensor_ptr[shiftpoint], shiftsize* sizeof(tensor_ptr[0]));
     // 2. Quantize new incoming floats directly into the right end of the tensor
     // DIM2LIN(shape,{0,0,0,shiftsize},4) = shiftsize
     int8_t *write_ptr = &tensor_ptr[shiftsize];
     // DIM2LIN(input_shape,{-1,-1},2) = input_shape[1]-1 + input_shape[1]*(input_shape[0]-1)
-    int8_t dim2lin = input_shape[1]*input_shape[0]-1;
+    int16_t dim2lin = input_shape[1]*input_shape[0]-1;
     for (size_t i = 0; i < dim2lin; i++)
-        write_ptr[i] = dl::quantize<int8_t>(normalize(input[i]), scale);
+            write_ptr[i] = dl::quantize<int8_t>(normalize(input[i]), scale);
 }
 
 // 1. Numerically stable Softmax function
@@ -137,7 +140,7 @@ void dequantize_model_output(float * probabilities) {
 
 /* These are the public facing functions used to run the model */
 
-void run_classifier_init(){
+bool run_classifier_init(){
 	/** Audio buffers, pointers and selectors **/
     // Transform Configuration
     dl::audio::SpeechFeatureConfig config;
@@ -151,7 +154,6 @@ void run_classifier_init(){
 	//config.dither=0.0;
 	//config.preemphasis_coefficient=0.0;
     transform = new dl::audio::Fbank(config);
-
     // Basic usage - loads model with default parameters
     model = new dl::Model((const char *)model_espdl, fbs::MODEL_LOCATION_IN_FLASH_RODATA);
     // Assigns the first element from the map
@@ -159,24 +161,35 @@ void run_classifier_init(){
     model_input = model_inputs.begin()->second;
     std::map<std::string, dl::TensorBase *> model_outputs = model->get_outputs();
     model_output = model_outputs.begin()->second;
+    if(model_output==nullptr || model_input==nullptr || model==nullptr || transform == nullptr){
+            ESP_LOGE(TAG, "Error, failed to assign model pointers!");
+            return false;
+        }
+    memset(transformoutput, 0, sizeof(transformoutput));
+    memset(overlapbuff, 0, sizeof(overlapbuff));
+    return true;
 }
 
 void run_classifier_continuous(float * input, float *output)
 {
-	uint16_t strideshape[2] = STRIDESHAPE;
-	uint16_t initstrideshape[2] = INITSTRIDESHAPE;
+	uint16_t strideshape[2] = {STRIDESHAPE_X,STRIDESHAPE_Y};
+	uint16_t initstrideshape[2] = {INITSTRIDESHAPE_X,INITSTRIDESHAPE_Y};
 	uint16_t * shape = strideshape;
-	if(init_count>0){
+    float * pnt2transformoutput = transformoutput;
+	if(!(init_count>0)){
 		shape = initstrideshape;
-		inittransform(input, &transformoutput[offset]);
+        pnt2transformoutput = &transformoutput[offset];
+		inittransform(input, pnt2transformoutput);
 	} else {
-		slicetransform(input,transformoutput);
+		slicetransform(input,pnt2transformoutput);
 	}
-	shift_and_quantize_direct(transformoutput,shape);
+	shift_and_quantize_direct(pnt2transformoutput,shape);
 	if (init_count>WINDOWSAMPLES/WINDOWSTRIDE)
 	{
 		model->run();
 		dequantize_model_output(output);
+        ESP_LOGI(TAG,"Modeling Result %f and %f",output[0],output[1]);
+    
 	}
 	else
 		init_count++;
