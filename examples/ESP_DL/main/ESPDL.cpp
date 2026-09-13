@@ -6,26 +6,13 @@
 #define STRIDESHAPE_X       GET_transformXsize(WINDOWSTRIDE/(WINDOWSAMPLES/1000)+FRAME_LENGTH-FRAME_SHIFT)
 #define INITSTRIDESHAPE_Y   NUM_MEL_BINS
 #define STRIDESHAPE_Y       NUM_MEL_BINS
- 
+//transformoutput will be bigger than what's needed for the first iteration, so here I set an offset:
+#define OFFSET              (STRIDESHAPE_X)*(STRIDESHAPE_Y) - (INITSTRIDESHAPE_X)*(INITSTRIDESHAPE_Y)
 static const char *TAG = "ESP-DL";
-
-constexpr uint8_t DIM2LIN(std::initializer_list<int> Sizes,std::initializer_list<int> idx,size_t num) {
-	const int* i = idx.begin();
-    const int* N = Sizes.begin();
-	int dumvar = i[num-1];
-	if (dumvar < 0)//If negative then I want to revert the index; like python
-		dumvar += N[num-1];
-    if(num > 1)
-    	dumvar += N[num-1]*DIM2LIN(Sizes,idx,num-1);
-    return dumvar;
-}
-
 
 // Transform Configuration
 dl::audio::Fbank * transform=nullptr;
 static float transformoutput[(STRIDESHAPE_X)*(STRIDESHAPE_Y)];
-//transformoutput is bigger than what's needed for the first iteration, so here I set an offset:
-static size_t offset = (STRIDESHAPE_X)*(STRIDESHAPE_Y) - (INITSTRIDESHAPE_X)*(INITSTRIDESHAPE_Y);
 static int32_t init_count=0;
 // not sure the best way to handle the overlap; here I just make an array
 static float overlapbuff[WINDOWSTRIDE+OVERLAP];
@@ -79,7 +66,6 @@ void shift_and_quantize_direct(const float *input, uint16_t *input_shape) {
      * flatten(inputshape) = inputshape[0]*inputshape[1]
      * **/
 	const std::vector<int> shape = model_input->get_shape();
-
     int8_t *tensor_ptr = (int8_t *)model_input->get_element_ptr();
     float scale = DL_RESCALE(model_input->exponent);
     // 1. Shift old quantized tensor data left
@@ -87,13 +73,11 @@ void shift_and_quantize_direct(const float *input, uint16_t *input_shape) {
     size_t shiftsize = shape[1]*shape[2] - shiftpoint;
     memmove(tensor_ptr, &tensor_ptr[shiftpoint], shiftsize* sizeof(tensor_ptr[0]));
     // 2. Quantize new incoming floats directly into the right end of the tensor
-    // DIM2LIN(shape,{0,0,0,shiftsize},4) = shiftsize
     int8_t *write_ptr = &tensor_ptr[shiftsize];
-    // DIM2LIN(input_shape,{-1,-1},2) = input_shape[1]-1 + input_shape[1]*(input_shape[0]-1)
-    int16_t dim2lin = input_shape[1]*input_shape[0]-1;
-    for (size_t i = 0; i < dim2lin; i++){
-        write_ptr[i] = dl::quantize<int8_t>(normalize(input[i]), scale);
-    }
+    for (size_t i = 0; i < shiftpoint; i++){
+            write_ptr[i] = dl::quantize<int8_t>(normalize(input[i]), scale);
+            //printf("Quantize results: input: %f output: %d\n",input[i],write_ptr[i]);
+        }
 }
 
 // 1. Numerically stable Softmax function
@@ -125,10 +109,9 @@ void dequantize_model_output(float * probabilities) {
     // Get the basic details of the output tensor
     int total_elements = model_output->get_size();
     float scale = DL_SCALE(model_output->exponent);
-    
     // Cast the raw array pointer (Use int8_t* since the model is quantized to 8-bits)
     int8_t* raw_output_ptr = (int8_t*)model_output->get_element_ptr();
-
+    printf("Logits Results: Faucet off: %d Faucet on: %d\n",raw_output_ptr[0],raw_output_ptr[1]);
     // Allocate arrays for calculation
     float dequantized_logits[total_elements];
 
@@ -154,7 +137,7 @@ bool run_classifier_init(){
 	//config.round_to_power_of_two=true;
 	config.window_type = dl::audio::WinType::HAMMING;
 	//config.dither=0.0;
-	//config.preemphasis_coefficient=0.0;
+	config.preemphasis=0.0;
     transform = new dl::audio::Fbank(config);
     // Basic usage - loads model with default parameters
     model = new dl::Model((const char *)model_espdl, fbs::MODEL_LOCATION_IN_FLASH_RODATA);
@@ -166,7 +149,7 @@ bool run_classifier_init(){
     if(model_output==nullptr || model_input==nullptr || model==nullptr || transform == nullptr){
             ESP_LOGE(TAG, "Error, failed to assign model pointers!");
             return false;
-        }
+    }
     memset(transformoutput, 0, sizeof(transformoutput));
     memset(overlapbuff, 0, sizeof(overlapbuff));
     return true;
@@ -180,7 +163,7 @@ void run_classifier_continuous(float * input, float *output)
     float * pnt2transformoutput = transformoutput;
 	if(!(init_count>0)){
 		shape = initstrideshape;
-        pnt2transformoutput = &transformoutput[offset];
+        pnt2transformoutput = &transformoutput[OFFSET];
 		inittransform(input, pnt2transformoutput);
 	} else {
 		slicetransform(input,pnt2transformoutput);
@@ -190,7 +173,6 @@ void run_classifier_continuous(float * input, float *output)
 	{
 		model->run();
 		dequantize_model_output(output);
-        printf("Faucet Off: %f Faucet On: %f",output[0],output[1]);
     
 	}
 	else
