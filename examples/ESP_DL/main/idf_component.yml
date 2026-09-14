@@ -16,6 +16,8 @@ dependencies:
   #   public: true
   espressif/esp-dl: '*'
   initI2S:
-    path: "../../initI2S_pcm"
+    git: https://github.com/SpaceDreams/ESP32components.git
+    path: I2S_pcm/initI2S
   I2Sloop:
-    path: "../../initI2S_pcm"
+    git: https://github.com/SpaceDreams/ESP32components.git
+    path: I2S_pcm/I2Sloop
