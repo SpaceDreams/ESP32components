@@ -6,21 +6,24 @@
 
 /* I2S Digital Microphone Recording Example */
 #include "init_I2S.h"
-#include "I2Sloop"
+#include "I2Sloop.h"
 #include <string.h> // Needed for memset
 #include "freertos/FreeRTOS.h" // need for portMAXDELAY
 #include "freertos/task.h" // for portMAXDELAY
 //#define SINGLE_SAMPLE_SIZE  (32 / 8)  // I can store in 2 bytes, or 4 bytes but not 3 bytes.
 #define SAMPLE_SIZE         INIT_SAMPLE_SIZE //(SINGLE_SAMPLE_SIZE * 1024) // Was 1024 Using a 24 bit 
-#define ENABLE_MIC_PIN 14
+#define ENABLE_MIC_PIN      14
 
 bool stream_audio(uint8_t* raw_buffer, size_t bytes_read, struct sampleArgs* Args)
 {
-    for (int j = 0; j<3; j++)
-        value |= (int32_t)raw_buffer[i+j]<<(8*j);
-    if (value & 0x00800000)
-           value |= 0xFF000000;
-    printf("%ld\n",value);
+    for (int i=0;i<bytes_read/3;i++){
+        int32_t value = 0;
+        for (int j = 0; j<3; j++)
+            value |= (int32_t)raw_buffer[i+j]<<(8*j);
+        if (value & 0x00800000)
+               value |= 0xFF000000;
+        printf("%ld\n",value);
+    }
     return true;
 }
 void app_main(void)
@@ -38,5 +41,5 @@ void app_main(void)
     // Start Recording
     struct sampleArgs NewArgs;
     NewArgs.loop_callback = stream_audio;
-    sample_audio(&NewArgs)
+    sample_audio(&NewArgs);
 }
