@@ -6,6 +6,11 @@
 
 #define TEST_MAX_CHAR_SIZE    64
 
+#if CONFIG_SD_CARD_MMC
+#define FILENAME "ESP32S3mmc"
+#elif CONFIG_SD_CARD_SPI
+#define FILENAME "SmartThingsSPI"
+#endif
 static const char *TAG = "SDtest";
 
 static esp_err_t s_test_write_file(const char *path, char *data)
@@ -58,7 +63,7 @@ void app_main(void)
     // Use POSIX and C standard library functions to work with files:
 
     // First create a file.
-    const char *file_hello = SD_MOUNT_POINT"/esp32s3hello.txt";
+    const char *file_hello = SD_MOUNT_POINT"/"FILENAME"hello.txt";
     // Check if destination file exists before renaming
     struct stat st1;
     if (stat(file_hello, &st1) == 0) {
@@ -73,7 +78,7 @@ void app_main(void)
         return;
     }
 
-    const char *file_foo = SD_MOUNT_POINT"/esp32s3foo.txt";
+    const char *file_foo = SD_MOUNT_POINT"/"FILENAME"foo.txt";
     // Check if destination file exists before renaming
     struct stat st;
     if (stat(file_foo, &st) == 0) {
@@ -94,7 +99,7 @@ void app_main(void)
         return;
     }
 
-    const char *file_nihao = SD_MOUNT_POINT"/esp32s3nihao.txt";
+    const char *file_nihao = SD_MOUNT_POINT"/"FILENAME"nihao.txt";
     memset(data, 0, TEST_MAX_CHAR_SIZE);
     snprintf(data, TEST_MAX_CHAR_SIZE, "%s %s!\n", "Nihao", card->cid.name);
     ret = s_test_write_file(file_nihao, data);

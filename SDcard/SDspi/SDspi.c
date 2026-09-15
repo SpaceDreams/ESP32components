@@ -1,8 +1,8 @@
 #include "SDcard.h"
-#define PIN_NUM_MISO        CONFIG_INIT_SPI_MISO_GPIO
-#define PIN_NUM_MOSI        CONFIG_INIT_SPI_MOSI_GPIO
-#define PIN_NUM_CLK         CONFIG_INIT_SPI_SCLK_GPIO
-#define PIN_NUM_CS          CONFIG_INIT_SPI_CS_GPIO
+#define PIN_NUM_MISO        CONFIG_LIB_SPI_MISO_GPIO
+#define PIN_NUM_MOSI        CONFIG_LIB_SPI_MOSI_GPIO
+#define PIN_NUM_CLK         CONFIG_LIB_SPI_SCLK_GPIO
+#define PIN_NUM_CS          CONFIG_LIB_SPI_CS_GPIO
 #define SPI_DMA_CHAN        SPI_DMA_CH_AUTO
 const char SDTAG[] = "SDspi";
 

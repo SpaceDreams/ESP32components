@@ -1,5 +1,5 @@
 For the ESP32s3 CRB Board the SD is interfaced using MMC.
-The pin is configured in the ESP-IDF terminal. Type `idf.py menucofig`  -> SD Using MMC Configuration -> SDCard Configuration
+The pin is configured in the ESP-IDF terminal. Select `idf.py menucofig`  -> SD Card Options -> SD Card Interface Options -> SDMMC then the menu 'SD Using MMC Configuration' will appear: `idf.py menucofig`  -> SD Card Options -> SD Card Interface Options -> SD Using MMC Configuration
 1) CMD GPIO number is GPIO 48
 1) CLK GPIO number 47
 1) D0 GPIO number 39

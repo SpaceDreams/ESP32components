@@ -123,7 +123,6 @@ void mount_sdcard(void)
                 check_sd_card_pins(&config, pin_count);
             #endif
         }
-    return NULL;
     }
     ESP_LOGI(SDTAG, "Filesystem mounted");
 

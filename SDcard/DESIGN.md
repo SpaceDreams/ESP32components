@@ -1,0 +1,1 @@
+In the SDmmc and SDspi directory there is a Kconfig file; it is the layout for what is in the main Kconfig.projbuild; for now I just copy that stuff into the main file, later I might be able to include it but now there are issues with relative file paths that are a little tricky to solve.

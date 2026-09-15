@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
+#include "format_wav.h"
 
 #define SD_MOUNT_POINT      CONFIG_SD_MOUNT_POINT
 
