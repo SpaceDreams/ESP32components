@@ -14,13 +14,14 @@
 #define SAMPLE_SIZE         INIT_SAMPLE_SIZE //(SINGLE_SAMPLE_SIZE * 1024) // Was 1024 Using a 24 bit 
 #define ENABLE_MIC_PIN 14
 
-void stream_audio(uint8_t* raw_buffer, size_t bytes_read, struct sampleArgs* Args)
+bool stream_audio(uint8_t* raw_buffer, size_t bytes_read, struct sampleArgs* Args)
 {
     for (int j = 0; j<3; j++)
         value |= (int32_t)raw_buffer[i+j]<<(8*j);
     if (value & 0x00800000)
            value |= 0xFF000000;
     printf("%ld\n",value);
+    return true;
 }
 void app_main(void)
 {
@@ -37,4 +38,5 @@ void app_main(void)
     // Start Recording
     struct sampleArgs NewArgs;
     NewArgs.loop_callback = stream_audio;
+    sample_audio(&NewArgs)
 }

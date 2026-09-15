@@ -1,7 +1,7 @@
 menu "I2S Configuration"
 
     choice AUDIO_SAMPLE
-        bool "Audio Sample Rate"
+        prompt "Audio Sample Rate"
         default AUDIO_SAMPLE_48K
         help
             Set the audio sample rate frequency. Max is 48kHz
