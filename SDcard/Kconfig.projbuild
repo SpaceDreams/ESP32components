@@ -1,0 +1,31 @@
+menu "SD Card Options"
+
+    # 1. Define the selection choice
+    choice SD_CARD_INTERFACE
+        prompt "SD Card Interface Type"
+        default SD_CARD_MMC
+
+        config SD_CARD_MMC
+            bool "SDMMC (MMC Mode)"
+
+        config SD_CARD_SPI
+            bool "SPI Mode"
+    endchoice
+
+    # 2. FIXED: Split the type definition from the default value
+    config SD_MOUNT_POINT
+        string "SD Card Mount Point"
+        default "/sdcard"
+        help
+            This is the directory on the ESP32 where the SD card is mounted.
+
+    # 3. FIXED: Put files inside structural IF/ENDIF blocks for ESP-IDF stability
+    if SD_CARD_MMC
+        source "$COMPONENT_DIR/SDcard/SDmmc/Kconfig.mmc"
+    endif
+
+    if SD_CARD_SPI
+        source "$COMPONENT_DIR/SDcard/SDspi/Kconfig.spi"
+    endif
+
+endmenu

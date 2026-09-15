@@ -1,6 +1,10 @@
-#include "initSDspi.h"
-
-const char SDTAG[] = "init_SD";
+#include "SDcard.h"
+#define PIN_NUM_MISO        CONFIG_INIT_SPI_MISO_GPIO
+#define PIN_NUM_MOSI        CONFIG_INIT_SPI_MOSI_GPIO
+#define PIN_NUM_CLK         CONFIG_INIT_SPI_SCLK_GPIO
+#define PIN_NUM_CS          CONFIG_INIT_SPI_CS_GPIO
+#define SPI_DMA_CHAN        SPI_DMA_CH_AUTO
+const char SDTAG[] = "SDspi";
 
 // When testing SD and SPI modes, keep in mind that once the card has been
 // initialized in SPI mode, it can not be reinitialized in SD mode without
@@ -57,4 +61,11 @@ void mount_sdcard(void)
 
     // Card has been initialized, print its properties
     sdmmc_card_print_info(stdout, card);
+}
+
+void unmount_sdcard(void){
+    // All done, unmount partition and disable SPI peripheral
+    esp_vfs_fat_sdcard_unmount(SD_MOUNT_POINT, card);
+    ESP_LOGI(SDTAG, "Card unmounted");
+    spi_bus_free(host.slot);
 }

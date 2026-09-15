@@ -1,19 +1,20 @@
-#include "initSDmmc.h"
+#include "driver/sdmmc_host.h"
+#include "SDcard.h"
 
-const char SDTAG[] = "init_SD";
+const char SDTAG[] = "SDmmc";
 
 // When testing SD and SPI modes, keep in mind that once the card has been
 // initialized in SPI mode, it can not be reinitialized in SD mode without
 // toggling power to the card.
 sdmmc_host_t host = SDMMC_HOST_DEFAULT();
 sdmmc_card_t *card;
-#if CONFIG_EXAMPLE_PIN_CARD_POWER_RESET
-static esp_err_t s_example_reset_card_power(void)
+#if CONFIG_LIB_PIN_CARD_POWER_RESET
+static esp_err_t s_lib_reset_card_power(void)
 {
     esp_err_t ret = ESP_FAIL;
     gpio_config_t io_conf = {
         .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = (1ULL<<CONFIG_EXAMPLE_PIN_CARD_POWER_RESET),
+        .pin_bit_mask = (1ULL<<CONFIG_LIB_PIN_CARD_POWER_RESET),
     };
     ret = gpio_config(&io_conf);
     if (ret != ESP_OK) {
@@ -21,7 +22,7 @@ static esp_err_t s_example_reset_card_power(void)
         return ret;
     }
 
-    ret = gpio_set_level(CONFIG_EXAMPLE_PIN_CARD_POWER_RESET, 1);
+    ret = gpio_set_level(CONFIG_LIB_PIN_CARD_POWER_RESET, 1);
     if (ret != ESP_OK) {
         ESP_LOGE(SDTAG, "Failed to set GPIO level");
         return ret;
@@ -29,7 +30,7 @@ static esp_err_t s_example_reset_card_power(void)
 
     vTaskDelay(100 / portTICK_PERIOD_MS);
 
-    ret = gpio_set_level(CONFIG_EXAMPLE_PIN_CARD_POWER_RESET, 0);
+    ret = gpio_set_level(CONFIG_LIB_PIN_CARD_POWER_RESET, 0);
     if (ret != ESP_OK) {
         ESP_LOGE(SDTAG, "Failed to set GPIO level");
         return ret;
@@ -37,9 +38,9 @@ static esp_err_t s_example_reset_card_power(void)
 
     return ESP_OK;
 }
-#endif // CONFIG_EXAMPLE_PIN_CARD_POWER_RESET
+#endif // CONFIG_LIB_PIN_CARD_POWER_RESET
 
-const char* mount_sdcard(void)
+void mount_sdcard(void)
 {
     esp_err_t ret;
     // Options for mounting the filesystem.
@@ -57,34 +58,34 @@ const char* mount_sdcard(void)
     // For setting a specific frequency, use host.max_freq_khz (range 400kHz - 40MHz for SDMMC)
     // Example: for fixed frequency of 10MHz, use host.max_freq_khz = 10000;
     host.unaligned_multi_block_rw_max_chunk_size = 8;
-    #if CONFIG_EXAMPLE_SDMMC_SPEED_HS
+    #if CONFIG_LIB_SDMMC_SPEED_HS
         host.max_freq_khz = SDMMC_FREQ_HIGHSPEED;
-    #elif CONFIG_EXAMPLE_SDMMC_SPEED_UHS_I_SDR50
+    #elif CONFIG_LIB_SDMMC_SPEED_UHS_I_SDR50
         host.slot = SDMMC_HOST_SLOT_0;
         host.max_freq_khz = SDMMC_FREQ_SDR50;
         host.flags &= ~SDMMC_HOST_FLAG_DDR;
-    #elif CONFIG_EXAMPLE_SDMMC_SPEED_UHS_I_DDR50
+    #elif CONFIG_LIB_SDMMC_SPEED_UHS_I_DDR50
         host.slot = SDMMC_HOST_SLOT_0;
         host.max_freq_khz = SDMMC_FREQ_DDR50;
-    #elif CONFIG_EXAMPLE_SDMMC_SPEED_UHS_I_SDR104
+    #elif CONFIG_LIB_SDMMC_SPEED_UHS_I_SDR104
         host.slot = SDMMC_HOST_SLOT_0;
         host.max_freq_khz = SDMMC_FREQ_SDR104;
         host.flags &= ~SDMMC_HOST_FLAG_DDR;
     #endif
   
-    #if CONFIG_EXAMPLE_PIN_CARD_POWER_RESET
-        ESP_ERROR_CHECK(s_example_reset_card_power());
+    #if CONFIG_LIB_PIN_CARD_POWER_RESET
+        ESP_ERROR_CHECK(s_lib_reset_card_power());
     #endif
     
         // This initializes the slot without card detect (CD) and write protect (WP) signals.
         // Modify slot_config.gpio_cd and slot_config.gpio_wp if your board has these signals.
         sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
-    #if EXAMPLE_IS_UHS1
+    #if LIB_IS_UHS1
         slot_config.flags |= SDMMC_SLOT_FLAG_UHS1;
     #endif
     
         // Set bus width to use:
-    #ifdef CONFIG_EXAMPLE_SDMMC_BUS_WIDTH_4
+    #ifdef CONFIG_LIB_SDMMC_BUS_WIDTH_4
         slot_config.width = 4;
     #else
         slot_config.width = 1;
@@ -93,14 +94,14 @@ const char* mount_sdcard(void)
         // On chips where the GPIOs used for SD card can be configured, set them in
         // the slot_config structure:
     #ifdef CONFIG_SOC_SDMMC_USE_GPIO_MATRIX
-        slot_config.clk = CONFIG_EXAMPLE_PIN_CLK;
-        slot_config.cmd = CONFIG_EXAMPLE_PIN_CMD;
-        slot_config.d0 = CONFIG_EXAMPLE_PIN_D0;
-        #ifdef CONFIG_EXAMPLE_SDMMC_BUS_WIDTH_4
-            slot_config.d1 = CONFIG_EXAMPLE_PIN_D1;
-            slot_config.d2 = CONFIG_EXAMPLE_PIN_D2;
-            slot_config.d3 = CONFIG_EXAMPLE_PIN_D3;
-        #endif  // CONFIG_EXAMPLE_SDMMC_BUS_WIDTH_4
+        slot_config.clk = CONFIG_LIB_PIN_CLK;
+        slot_config.cmd = CONFIG_LIB_PIN_CMD;
+        slot_config.d0 = CONFIG_LIB_PIN_D0;
+        #ifdef CONFIG_LIB_SDMMC_BUS_WIDTH_4
+            slot_config.d1 = CONFIG_LIB_PIN_D1;
+            slot_config.d2 = CONFIG_LIB_PIN_D2;
+            slot_config.d3 = CONFIG_LIB_PIN_D3;
+        #endif  // CONFIG_LIB_SDMMC_BUS_WIDTH_4
     #endif  // CONFIG_SOC_SDMMC_USE_GPIO_MATRIX
     
     // Enable internal pullups on enabled pins. The internal pullups
@@ -114,11 +115,11 @@ const char* mount_sdcard(void)
     if (ret != ESP_OK) {
         if (ret == ESP_FAIL) {
             ESP_LOGE(SDTAG, "Failed to mount filesystem. "
-                     "If you want the card to be formatted, set the EXAMPLE_FORMAT_IF_MOUNT_FAILED menuconfig option.");
+                     "If you want the card to be formatted, set the LIB_FORMAT_IF_MOUNT_FAILED menuconfig option.");
         } else {
             ESP_LOGE(SDTAG, "Failed to initialize the card (%s). "
                      "Make sure SD card lines have pull-up resistors in place.", esp_err_to_name(ret));
-            #ifdef CONFIG_EXAMPLE_DEBUG_PIN_CONNECTIONS
+            #ifdef CONFIG_LIB_DEBUG_PIN_CONNECTIONS
                 check_sd_card_pins(&config, pin_count);
             #endif
         }
@@ -128,5 +129,10 @@ const char* mount_sdcard(void)
 
     // Card has been initialized, print its properties
     sdmmc_card_print_info(stdout, card);
-    return mount_point;
+}
+
+void unmount_sdcard(void){
+    // All done, unmount partition and disable SPI peripheral
+    esp_vfs_fat_sdcard_unmount(SD_MOUNT_POINT, card);
+    ESP_LOGI(SDTAG, "Card unmounted");
 }

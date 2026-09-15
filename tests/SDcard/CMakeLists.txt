@@ -3,8 +3,8 @@
 cmake_minimum_required(VERSION 3.22)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-set(EXTRA_COMPONENT_DIRS "../..")
+#set(EXTRA_COMPONENT_DIRS "../../SDcard")
 # "Trim" the build. Include the minimal set of components, main, and anything it depends on.
 idf_build_set_property(MINIMAL_BUILD ON)
 
-project(esp32_SSDmmctest)
+project(esp32_SSDcardtest)
