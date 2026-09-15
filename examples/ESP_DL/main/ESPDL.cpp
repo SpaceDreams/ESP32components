@@ -173,7 +173,6 @@ void run_classifier_continuous(float * input, float *output)
 	{
 		model->run();
 		dequantize_model_output(output);
-    
 	}
 	else
 		init_count += WINDOWSTRIDE;

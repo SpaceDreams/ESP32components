@@ -1,0 +1,1 @@
+This is a test that is the exact same as the initI2S tests except now I use the loop which helps relieve extra scripting.

@@ -1,4 +1,4 @@
-The Purpose of this component is to provide skeleton code for the C library Edge Impulse creates.
+The Purpose of this directory is to provide skeleton code for the C library that Edge Impulse creates.
 Once the C Library is downloaded include the directorys of the library in this folder.
 
 A usage example is provided in the test directory.
@@ -24,3 +24,5 @@ components/EdgeImpulse/edge-impulse-sdk/classifier/inferencing_engines/tflite_mi
       |                               |
       |                               uint32_t {aka long unsigned int}
 ```
+
+The simplest fix is to manually change the `%d` into an `%ld`. Luckily this only happens once.
