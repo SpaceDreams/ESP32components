@@ -6,7 +6,7 @@
 #pragma once
 /* I2S Digital Microphone Recording Example */
 #include "format_wav.h"
-#include "initSDmmc.h"
+#include "SDcard.h"
 
 #ifdef __cplusplus
 extern "C" {

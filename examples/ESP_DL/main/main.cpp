@@ -136,10 +136,11 @@ extern "C" void app_main(){
     const char *classification_cases[] = {"faucet_off","faucet_on","faucet_onoff"};
     int length = snprintf(NULL, 0, "faucetfile_16bit_%s_espdl.wav", classification_cases[boot_counter]);
     char *wavfilename = (char *)malloc((length + 1)* sizeof(char));
-    snprintf(wavfilename, length + 1, "faucetfile_16bit_%s_espdl.wav", classification_cases[boot_counter]);
+    snprintf(wavfilename, length + 1, "faucetfile_24bit_%s_espdl.wav", classification_cases[boot_counter]);
 
     // Here I am opening the file and creating the name:
-    const char *mount_point = mount_sdcard();
+    mount_sdcard();
+    const char *mount_point = SD_MOUNT_POINT;
     FILE* rec_file = init_wavfile(REC_TIME, wavfilename);
     // summary of inferencing settings (from model_metadata.h)
     printf("Transform settings:\n");
@@ -153,14 +154,13 @@ extern "C" void app_main(){
     uint32_t curr_classifications = 0;
     const char* const class_labels[] = CLASSIFIER_LABELS;
     uint32_t curr_samples =0;
-    
-    // Now I can start the microphone and start recording
-    if (microphone_start(WINDOWSTRIDE,rec_file) == false) {
-        ESP_LOGE(TAG, "Issue starting microphone");
+    // Now I can initalize the classifier
+    if (run_classifier_init() == false) {
+        ESP_LOGE(TAG, "Issue Initializing Model");
         return;
     }
-    // Now I can start the classifier
-    if (run_classifier_init() == false) {
+    // Now I can start the microphone and start recording
+    if (microphone_start(WINDOWSTRIDE,rec_file) == false) {
         ESP_LOGE(TAG, "Issue starting microphone");
         return;
     }
@@ -181,7 +181,7 @@ extern "C" void app_main(){
     // Create the filename for the predictions
     length = snprintf(NULL, 0, "inference_logs_16bit_%s_espdl.txt", classification_cases[boot_counter]);
     char *inferencefilename = (char *)malloc((length + 1)* sizeof(char));
-    snprintf(inferencefilename, length + 1, "inference_logs_16bit_%s_espdl.txt", classification_cases[boot_counter]);
+    snprintf(inferencefilename, length + 1, "inference_logs_24bit_%s_espdl.txt", classification_cases[boot_counter]);
     FILE* inference_logs = init_file(inferencefilename);
 
     // save the predictions

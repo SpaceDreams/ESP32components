@@ -18,7 +18,7 @@ static int32_t init_count=0;
 static float overlapbuff[WINDOWSTRIDE+OVERLAP];
 //Model Configuration
 // The symbol name is composed of three parts: prefix "_binary_", filename "signaldect_espdl", and suffix "_start"
-extern const uint8_t model_espdl[] asm("_binary_signaldect_2d_espdl_start"); //
+extern const uint8_t model_espdl[] asm("_binary_signaldect_2d_efloor_espdl_start"); //
 dl::Model *model = nullptr;
 // Assigns the first 
 dl::TensorBase *model_input = nullptr;
@@ -141,6 +141,8 @@ bool run_classifier_init(){
     transform = new dl::audio::Fbank(config);
     // Basic usage - loads model with default parameters
     model = new dl::Model((const char *)model_espdl, fbs::MODEL_LOCATION_IN_FLASH_RODATA);
+    ESP_ERROR_CHECK(model->test());
+    model->profile_memory();
     // Assigns the first element from the map
     std::map<std::string, dl::TensorBase *> model_inputs = model->get_inputs();
     model_input = model_inputs.begin()->second;

@@ -14,13 +14,6 @@ dependencies:
   #   # `public` flag doesn't have an effect dependencies of the `main` component.
   #   # All dependencies of `main` are public by default.
   #   public: true
-  espressif/esp-dl: '*'
-  initI2S:
-    git: https://github.com/SpaceDreams/ESP32components.git
-    path: I2S_pcm/initI2S
-  I2Sloop:
-    git: https://github.com/SpaceDreams/ESP32components.git
-    path: I2S_pcm/I2Sloop
   SDcard:
     git: https://github.com/SpaceDreams/ESP32components.git
     path: SDcard
