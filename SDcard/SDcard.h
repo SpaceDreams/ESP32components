@@ -27,7 +27,7 @@ typedef struct {
     uint32_t bit_width;
     uint32_t num_channels;
 } WAVstruct;
-FILE* init_wavfile(const WAVstruct Args, const char *filename)
+FILE* init_wavfile(const WAVstruct Args, const char *filename);
 
 #ifdef __cplusplus
 }

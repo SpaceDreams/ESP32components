@@ -61,7 +61,6 @@ void app_main(void)
     ESP_LOGI(TAG, "Initializing SD card");
     mount_sdcard();
     // Use POSIX and C standard library functions to work with files:
-
     // First create a file.
     const char *file_hello = SD_MOUNT_POINT"/"FILENAME"hello.txt";
     // Check if destination file exists before renaming

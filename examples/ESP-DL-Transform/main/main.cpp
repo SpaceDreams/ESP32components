@@ -53,7 +53,7 @@ float normalize(float x){
     return x*multiplier-subtract_val;
 }
 
-void shift_and_quantize_direct(const float *input, uint16_t *input_shape) {
+void shift(const float *input, uint16_t *input_shape) {
     /** Example Shifting:
      * x={{1,2,3},{4,5,6},{7,8,9}}
      * input = {8,9,10} \\ only considering the case where rows are different but columns are always the same
@@ -110,21 +110,23 @@ void app_main(void){
     run_classifier_init();
     mount_sdcard();
     const char *mount_point = SD_MOUNT_POINT;
-    FILE* f = init_file("simulated_signal.byte");
+    FILE* f = init_file("simulated_signal.bin");
     uint32_t t_count = 0;
     float inputbuff[WINDOWSTRIDE]={0};
     t_count = simulated_signal(inputbuff,t_count);
     inittransform(inputbuff,transformoutput);
+    shift(transformoutput,{INITSTRIDESHAPE_X,INITSTRIDESHAPE_Y});
     for(int j=0; j<3; j++){
         t_count = simulated_signal(inputbuff,t_count);
-        uint32_t offset = j*(STRIDESHAPE_X)*(STRIDESHAPE_Y)+(INITSTRIDESHAPE_X)*(INITSTRIDESHAPE_Y);
-        slicetransform(inputbuff,&transformoutput[offset])
+        slicetransform(inputbuff,transformoutput);
+        shift(transformoutput,{STRIDESHAPE_X,STRIDESHAPE_Y});
     }
-    fwrite(transformoutput, sizeof(transformoutput[0]), INITSTRIDESHAPE_Y*INITSTRIDESHAPE_X, f);
-    for(int j=0; j<3; j++){
+    fwrite(model_input, sizeof(model_input[0]), sizeof(model_input)/sizeof(model_input[0]) , f);
+    for(int j=0; j<4; j++){
         t_count = simulated_signal(inputbuff,t_count);
-        uint32_t offset = j*(STRIDESHAPE_X)*(STRIDESHAPE_Y)+(INITSTRIDESHAPE_X)*(INITSTRIDESHAPE_Y);
-        slicetransform(inputbuff,&transformoutput[offset])
+        slicetransform(inputbuff,transformoutput)
+        shift(transformoutput,{STRIDESHAPE_X,STRIDESHAPE_Y});
+        fwrite(model_input, sizeof(model_input[0]), sizeof(model_input)/sizeof(model_input[0]) , f);
     }
     
 }
