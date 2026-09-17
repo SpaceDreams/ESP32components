@@ -33,9 +33,9 @@ extern "C" bool audio_callback(uint8_t* raw_buffer, size_t n_bytes, struct sampl
         }
     }
     // Save here
-    FILE* f = Args->rec_file;
-    size_t dumvar = n_bytes;
     if(!streameddata.CompletedSaving){
+        FILE* f = Args->rec_file;
+        size_t dumvar = n_bytes;
         if((streameddata.rec_samples+dumvar/3) > TOTSAMPLES){
             dumvar = (TOTSAMPLES - streameddata.rec_samples)*3;
             streameddata.CompletedSaving = true;// Done saving

@@ -4,6 +4,6 @@ elseif(CONFIG_SD_CARD_SPI)
     set(srcs "SDspi/SDspi.c")
 endif()
 
-idf_component_register(SRCS ${srcs}
+idf_component_register(SRCS ${srcs} "initFILE.c"
                     INCLUDE_DIRS "." "DataFormats"
                     REQUIRES fatfs)

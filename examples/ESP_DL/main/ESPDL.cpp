@@ -28,28 +28,29 @@ void inittransform(float * input, float * output){
     memcpy(overlapbuff,&input[WINDOWSTRIDE-OVERLAP],OVERLAP*sizeof(input[0]));
     transform->process(input, WINDOWSTRIDE, output);
 }
-void slicetransform(float * input, float * output){
+void slicetransform(const float * input, float * output){
 	memcpy(&overlapbuff[OVERLAP],input,WINDOWSTRIDE*sizeof(input[0]));
     transform->process(overlapbuff, WINDOWSTRIDE+OVERLAP, output);
     memmove(overlapbuff,&overlapbuff[WINDOWSTRIDE],OVERLAP*sizeof(overlapbuff[0]));
 }
 
-float normalize(float x){
-	//# 1. Hard clamp extreme values to stabilize the distribution boundary
-    //# Typical faucet fbank features sit well between -20 and 80 dB
-	float min_val = -20.0f;
-    float max_val = 80.0f;
-	if (x>max_val)
-		x = 80.0f;
-	else if(x<min_val)
-		x=-20.0f;
-	//# 2. Normalize to a predictable, tight range (e.g., -1.0 to 1.0)
+float normalize(const float x){
+    //# 1. Normalize to a predictable, tight range (e.g., -1.0 to 1.0)
     //# This prevents the Power-of-Two scale from leaving huge empty gaps in the INT8 range
     //fbank_normalized = 2.0 * (fbank - (-20.0)) / (80.0 - (-20.0)) - 1.0
     //fbank_normalized = (fbank - (-20.0)) / 50 - 1.0 = fbank/50+2/5-1=fbank/50-3/5
     float multiplier = 0.02f;
     float subtract_val = 0.6f;
-    return x*multiplier-subtract_val;
+    float res = x*multiplier-subtract_val;
+    //# 2. Hard clamp extreme values to stabilize the distribution boundary
+    //# The model set this between -20 and 80 dB
+    float min_val = -20.0f;
+    float max_val = 80.0f;
+	if (x>max_val)
+		res = 1.0f;
+	else if(x<min_val)
+		res=-1.0f;
+    return res
 }
 
 
