@@ -1,14 +1,17 @@
 
 #include "dl_fbank.hpp"
+#include "math.h" //need pi use: M_PI
+#include "SDcard.h"
 // Transform Configuration:
+#define NUM_MEL_BINS        40 //
 #define FRAME_LENGTH        20 //[ms] in milliseconds
 #define FRAME_SHIFT         10 //[ms]
 #define SAMPLE_RATE         48000
 #define REC_TIME            2 //[s] in seconds
 #define WINDOWSAMPLES      SAMPLE_RATE // This is set by the model
-#define WINDOWSTRIDE        WINDOWSAMPLES/4 //The minimum number is (frame_length*Sample_Rate)
+#define WINDOWSTRIDE        (WINDOWSAMPLES/4) //The minimum number is (frame_length*Sample_Rate)
 #define GET_transformXsize(framesamples) ((framesamples)-(FRAME_LENGTH))/(FRAME_SHIFT)+1
-#define OVERLAP           (FRAME_LENGTH-FRAME_SHIFT)*(WINDOWSAMPLES/1000)
+#define OVERLAP           (FRAME_LENGTH-FRAME_SHIFT)*(WINDOWSAMPLES/1000)//
 #define INITSTRIDESHAPE_X   GET_transformXsize(WINDOWSTRIDE/(WINDOWSAMPLES/1000))
 #define STRIDESHAPE_X       GET_transformXsize(WINDOWSTRIDE/(WINDOWSAMPLES/1000)+FRAME_LENGTH-FRAME_SHIFT)
 #define INITSTRIDESHAPE_Y   NUM_MEL_BINS
@@ -16,14 +19,18 @@
 //transformoutput will be bigger than what's needed for the first iteration, so here I set an offset:
 #define OFFSET              (STRIDESHAPE_X)*(STRIDESHAPE_Y) - (INITSTRIDESHAPE_X)*(INITSTRIDESHAPE_Y)
 #define TOT_CLASSIFICATIONS    ((REC_TIME*SAMPLE_RATE) - WINDOWSAMPLES)/(WINDOWSTRIDE) + 1
+static const char *TAG = "Transform Tests";
 // Transform Configuration
 dl::audio::Fbank * transform=nullptr;
-static float transformoutput[(STRIDESHAPE_X)*(STRIDESHAPE_Y)];
-static int32_t init_count=0;
+static const uint16_t sizeoftransout = (STRIDESHAPE_X)*(STRIDESHAPE_Y);//25*40
+static const uint16_t sizeofoverlapbuff = WINDOWSTRIDE+OVERLAP;//12000+480
+static const uint16_t sizeofmodelinput = (STRIDESHAPE_X)*(STRIDESHAPE_Y)*3+(INITSTRIDESHAPE_X)*(INITSTRIDESHAPE_Y);
+
+static float transformoutput[sizeoftransout];
 // not sure the best way to handle the overlap; here I just make an array
-static float overlapbuff[WINDOWSTRIDE+OVERLAP];
+static float overlapbuff[sizeofoverlapbuff];
 // I'm choosing a 3 for now because I know that works; but generally that's related to the model_input
-static float model_input[(STRIDESHAPE_X)*(STRIDESHAPE_Y)*3+(INITSTRIDESHAPE_X)*(INITSTRIDESHAPE_Y)];
+static float model_input[sizeofmodelinput];
 
 void inittransform(float * input, float * output){
     memcpy(overlapbuff,&input[WINDOWSTRIDE-OVERLAP],OVERLAP*sizeof(input[0]));
@@ -65,13 +72,17 @@ void shift(const float *input, uint16_t *input_shape) {
      * flatten(xshape)=xshape[0]*xshape[1]
      * flatten(inputshape) = inputshape[0]*inputshape[1]
      * **/
-    const std::vector<int> shape = {1,(INITSTRIDESHAPE_X)+3*(STRIDESHAPE_X),NUM_MEL_BINS}
+    const std::vector<int> shape = {1,(INITSTRIDESHAPE_X)+3*(STRIDESHAPE_X),NUM_MEL_BINS};
     // 1. Shift old quantized tensor data left
     size_t shiftpoint = input_shape[0]*input_shape[1];
     size_t shiftsize = shape[1]*shape[2] - shiftpoint;
     memmove(model_input, &model_input[shiftpoint], shiftsize* sizeof(model_input[0]));
     // 2. Quantize new incoming floats directly into the right end of the tensor
-    memmove(&model_input[shiftsize],input,shiftpoint* sizeof(model_input[0]))
+    float *write_ptr = &model_input[shiftsize];
+    for (size_t i = 0; i < shiftpoint; i++){
+            write_ptr[i] = normalize(input[i]);
+            //printf("Quantize results: input: %f output: %d\n",input[i],write_ptr[i]);
+        }
 }
 
 bool run_classifier_init(){
@@ -92,41 +103,64 @@ bool run_classifier_init(){
             ESP_LOGE(TAG, "Error, failed to assign model pointers!");
             return false;
     }
-    memset(transformoutput, 0, sizeof(transformoutput));
-    memset(overlapbuff, 0, sizeof(overlapbuff));
-    memset(model_input, 0, sizeof(model_input));
+/*    ESP_LOGI("DIAG", "transformoutput ptr: %p", (void *)transformoutput);
+ESP_LOGI("DIAG", "overlapbuff ptr: %p", (void *)overlapbuff);
+ESP_LOGI("DIAG", "model_input ptr: %p", (void *)model_input);
+    memset(transformoutput, 0, sizeoftransout*sizeof(transformoutput[0]));
+    ESP_LOGI("DIAG", "after setting transformoutput: overlapbuff ptr: %p", (void *)overlapbuff);
+    memset(overlapbuff, 0, sizeofoverlapbuff*sizeof(overlapbuff[0]));
+    ESP_LOGI("DIAG", "after setting overlapbuff model_input ptr: %p", (void *)model_input);
+    memset(model_input, 0, sizeofmodelinput*sizeof(model_input[0]));
+    ESP_LOGI(TAG, "Initialized Model");
+*/
     return true;
 }
 
 int32_t simulated_signal(float * input, int32_t offset)
 {
-    int samples = WINDOWSTRIDE;
-    for (uint32_t i=0,i<WINDOWSTRIDE,i++)
-        input[i] = np.sin(2 * np.pi * 1000 * (offset+i)/SAMPLE_RATE) 
-    return offset+WINDOWSTRIDE
+    for (uint32_t i=0;i<WINDOWSTRIDE;i++)
+        input[i] = sin(2 * M_PI * 1000 * (offset+i)/SAMPLE_RATE);
+    return offset+WINDOWSTRIDE;
 }
 
-void app_main(void){
+int32_t simulated_shifting_signal(float * input, int32_t offset)
+{
+    int32_t count = offset/(WINDOWSTRIDE)-3;
+    if (offset<WINDOWSAMPLES) count = 0;
+    printf("offset: %ld\n",offset);
+    printf("count: %ld\n",count);
+    printf("division %ld/%d = %ld\n",offset,WINDOWSTRIDE,offset/(WINDOWSTRIDE));
+    int32_t fpicks[] = {100,1000,10000,20000,23000};
+    for (uint32_t i=0;i<WINDOWSTRIDE;i++)
+        input[i] = sin(2 * M_PI * fpicks[count] * (offset+i)/SAMPLE_RATE);
+    return offset+WINDOWSTRIDE;
+}
+
+extern "C" void app_main(void){
     run_classifier_init();
     mount_sdcard();
-    const char *mount_point = SD_MOUNT_POINT;
-    FILE* f = init_file("simulated_signal.bin");
+    FILE* f = init_file("simulated_signal_r5.bin");
     uint32_t t_count = 0;
-    float inputbuff[WINDOWSTRIDE]={0};
-    t_count = simulated_signal(inputbuff,t_count);
+    static float inputbuff[WINDOWSTRIDE]={0};
+    ESP_LOGI(TAG, "Made it here");
+    t_count = simulated_shifting_signal(inputbuff,t_count);
     inittransform(inputbuff,transformoutput);
-    shift(transformoutput,{INITSTRIDESHAPE_X,INITSTRIDESHAPE_Y});
+    uint16_t initStrideShape[]={INITSTRIDESHAPE_X,INITSTRIDESHAPE_Y};
+    shift(transformoutput,initStrideShape);
+    uint16_t StrideShape[]={STRIDESHAPE_X,STRIDESHAPE_Y};
     for(int j=0; j<3; j++){
-        t_count = simulated_signal(inputbuff,t_count);
+        t_count = simulated_shifting_signal(inputbuff,t_count);
         slicetransform(inputbuff,transformoutput);
-        shift(transformoutput,{STRIDESHAPE_X,STRIDESHAPE_Y});
+        shift(transformoutput,StrideShape);
     }
     fwrite(model_input, sizeof(model_input[0]), sizeof(model_input)/sizeof(model_input[0]) , f);
     for(int j=0; j<4; j++){
-        t_count = simulated_signal(inputbuff,t_count);
-        slicetransform(inputbuff,transformoutput)
-        shift(transformoutput,{STRIDESHAPE_X,STRIDESHAPE_Y});
+        t_count = simulated_shifting_signal(inputbuff,t_count);
+        slicetransform(inputbuff,transformoutput);
+        shift(transformoutput,StrideShape);
         fwrite(model_input, sizeof(model_input[0]), sizeof(model_input)/sizeof(model_input[0]) , f);
     }
+    fclose(f);
+    unmount_sdcard();
     
 }

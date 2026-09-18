@@ -12,10 +12,11 @@ static const char *TAG = "ESP-DL";
 
 // Transform Configuration
 dl::audio::Fbank * transform=nullptr;
-static float transformoutput[(STRIDESHAPE_X)*(STRIDESHAPE_Y)];
+static const uint16_t sizeoftransout = (STRIDESHAPE_X)*(STRIDESHAPE_Y);
+static float transformoutput[sizeoftransout];
 static int32_t init_count=0;
-// not sure the best way to handle the overlap; here I just make an array
-static float overlapbuff[WINDOWSTRIDE+OVERLAP];
+static const uint16_t sizeofoverlapbuff = WINDOWSTRIDE+OVERLAP;
+static float overlapbuff[sizeofoverlapbuff];
 //Model Configuration
 // The symbol name is composed of three parts: prefix "_binary_", filename "signaldect_espdl", and suffix "_start"
 extern const uint8_t model_espdl[] asm("_binary_signaldect_2d_efloor_espdl_start"); //
@@ -153,8 +154,8 @@ bool run_classifier_init(){
             ESP_LOGE(TAG, "Error, failed to assign model pointers!");
             return false;
     }
-    memset(transformoutput, 0, sizeof(transformoutput));
-    memset(overlapbuff, 0, sizeof(overlapbuff));
+    memset(transformoutput, 0, sizeof(transformoutput[0]));
+    memset(overlapbuff, 0, sizeof(overlapbuff[0]));
     return true;
 }
 
