@@ -10,15 +10,15 @@
 #define REC_TIME            2 //[s] in seconds
 #define WINDOWSAMPLES      SAMPLE_RATE // This is set by the model
 #define WINDOWSTRIDE        (WINDOWSAMPLES/4) //The minimum number is (frame_length*Sample_Rate)
-#define GET_transformXsize(framesamples) ((framesamples)-(FRAME_LENGTH))/(FRAME_SHIFT)+1
-#define OVERLAP           (FRAME_LENGTH-FRAME_SHIFT)*(WINDOWSAMPLES/1000)//
-#define INITSTRIDESHAPE_X   GET_transformXsize(WINDOWSTRIDE/(WINDOWSAMPLES/1000))
-#define STRIDESHAPE_X       GET_transformXsize(WINDOWSTRIDE/(WINDOWSAMPLES/1000)+FRAME_LENGTH-FRAME_SHIFT)
+#define GET_transformXsize(framesamples) (((framesamples)-(FRAME_LENGTH))/(FRAME_SHIFT)+1)
+#define OVERLAP           ((FRAME_LENGTH-FRAME_SHIFT)*(WINDOWSAMPLES/1000))//
+#define INITSTRIDESHAPE_X   GET_transformXsize((WINDOWSTRIDE/(WINDOWSAMPLES/1000)))
+#define STRIDESHAPE_X       GET_transformXsize((WINDOWSTRIDE/(WINDOWSAMPLES/1000))+FRAME_LENGTH-FRAME_SHIFT)
 #define INITSTRIDESHAPE_Y   NUM_MEL_BINS
 #define STRIDESHAPE_Y       NUM_MEL_BINS
 //transformoutput will be bigger than what's needed for the first iteration, so here I set an offset:
-#define OFFSET              (STRIDESHAPE_X)*(STRIDESHAPE_Y) - (INITSTRIDESHAPE_X)*(INITSTRIDESHAPE_Y)
-#define TOT_CLASSIFICATIONS    ((REC_TIME*SAMPLE_RATE) - WINDOWSAMPLES)/(WINDOWSTRIDE) + 1
+#define OFFSET              ((STRIDESHAPE_X)*(STRIDESHAPE_Y) - (INITSTRIDESHAPE_X)*(INITSTRIDESHAPE_Y))
+#define TOT_CLASSIFICATIONS    (((REC_TIME*SAMPLE_RATE) - WINDOWSAMPLES)/(WINDOWSTRIDE) + 1)
 static const char *TAG = "Transform Tests";
 // Transform Configuration
 dl::audio::Fbank * transform=nullptr;

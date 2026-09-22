@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torchaudio.compliance.kaldi as kaldi
-
+import numpy as np
 class KaldiSpectrogram(nn.Module):
     def __init__(self, sample_frequency=48000.0, frame_length=25.0, frame_shift=10.0):
         super().__init__()
@@ -33,7 +33,9 @@ class Kaldifbank(nn.Module):#Mel-filterbank
         self.noise_floor = noise_floor #in dB
 
     def forward(self, waveform: torch.Tensor) -> torch.Tensor:
-        torchwaveform = torch.from_numpy(waveform).float().T
+        i = np.arange(self.frame_length , dtype=np.float32)
+        win_wave=0.54 - 0.46 * np.cos((2.0 * np.pi * i) / (self.frame_length - 1))
+        torchwaveform = torch.from_numpy(waveform*win_wave).float().T
         # the parsing the wave file provides (time,channel)
         # kaldi.spectrogram expects a 2D tensor of shape (channel, time)
         res = kaldi.fbank(
@@ -44,12 +46,12 @@ class Kaldifbank(nn.Module):#Mel-filterbank
             num_mel_bins=self.filter_number,
             low_freq=self.low_frequency,
             high_freq=self.high_frequency,
-            #energy_floor = 10**(self.noise_floor/10), #noise_floor is in dB where energy_floor is not
-            energy_floor = 0,#The ESP-DL library sets this at 0. 
+            energy_floor = 1.1920928955078125e-07,#The ESP-DL library sets this at 0. 
             round_to_power_of_two=True,
-            window_type="hamming",
+            window_type="rectangular",
             dither=0.0,
-            preemphasis_coefficient=0.0
+            preemphasis_coefficient=0.0,
+            snip_edges=True
         )
         # 1. Hard clamp extreme values to stabilize the distribution boundary
         # Typical the faucet fbank features sit well between -20 and 80 dB
