@@ -18,7 +18,7 @@ FILE* init_file(const char *filename)
     // Use POSIX and C standard library functions to work with files.
     ESP_LOGI(sd_TAG, "Opening file");
     size_t namesize = (strlen(SD_MOUNT_POINT)+1+strlen(filename)+1);
-    char *filepath = malloc(namesize*sizeof(char));
+    char *filepath = (char *)malloc(namesize*sizeof(char));
     if (filepath == NULL) return NULL;
     snprintf(filepath, namesize, "%s/%s", SD_MOUNT_POINT, filename);
     // First check if file exists before creating a new file.
