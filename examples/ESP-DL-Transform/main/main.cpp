@@ -162,5 +162,4 @@ extern "C" void app_main(void){
     }
     fclose(f);
     unmount_sdcard();
-    
 }

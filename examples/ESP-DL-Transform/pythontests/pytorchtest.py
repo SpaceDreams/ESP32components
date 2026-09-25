@@ -8,15 +8,15 @@ windowsamples = fs
 windowstride = int(windowsamples/4)
 
 # For 32-bit standard floats (4 bytes each)
-#data_32 = np.fromfile("simulated_signal_r5.bin", dtype=np.float32)
-data_32 = np.fromfile("data_1.bin", dtype=np.float32)
-matrix_3d=np.empty(((5, 99, 40)), dtype=np.float32)
+data_32 = np.fromfile("simulated_signal_r5.bin", dtype=np.float32)
+#data_32 = np.fromfile("data_1.bin", dtype=np.float32)
+#matrix_3d=np.empty(((5, 99, 40)), dtype=np.float32)
 # Reshape directly into the 3D dimensions
-matrix_3d[0,:,:] = data_32.reshape((1, 99, 40))
+matrix_3d = data_32.reshape((5, 99, 40))
 
 # 3. Create a single figure with 4 subplots side-by-side
 fig, axes = plt.subplots(2, 3, figsize=(16, 4))
-
+#axes.set_title("ESP32s3 Fbank Function")
 for i,ax in enumerate(axes.flat,start=0):
     if i>4: continue 
     # Select the i-th slice [i, :, :]
@@ -26,7 +26,9 @@ for i,ax in enumerate(axes.flat,start=0):
 fig.colorbar(heatmap, ax=axes.ravel().tolist(), shrink=0.6)
 
 fig1, axes1 = plt.subplots(2, 3, figsize=(16, 4))
+#axes1.set_title("Pytorch Fbank Function")
 fig2, axes2 = plt.subplots(2, 3, figsize=(16, 4))
+#axes2.set_title("Log Squared Magnitude of the Error")
 # Simulate a 1-second 48kHz audio stream with a 1kHz tone
 t = np.linspace(0, windowsamples/fs, fs, endpoint=False)
 t=t.reshape(len(t),1)

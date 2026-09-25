@@ -10,7 +10,6 @@ extern "C" void app_main(){
     mount_sdcard();
     const char * faucetoffdir = SD_MOUNT_POINT"/fauceton";
     DIR *nofaucetdir = opendir(faucetoffdir);
-    ESP_LOGI(TAG, "Made it here");
     if (nofaucetdir == NULL) {
         ESP_LOGE(TAG, "Could Not Open Directory");
         return;

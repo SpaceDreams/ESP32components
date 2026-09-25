@@ -21,14 +21,9 @@
 #define INITSTRIDESHAPE_Y   NUM_MEL_BINS
 #define STRIDESHAPE_Y       NUM_MEL_BINS
 
-#define REC_TIME            2 //[s] in seconds
-#define WINDOWSAMPLES      SAMPLE_RATE // This is set by the model
-#define WINDOWSTRIDE        (WINDOWSAMPLES/4) //The minimum number is (frame_length*Sample_Rate)
-
 //transformoutput will be bigger than what's needed for the first iteration, so here I set an offset:
 #define OFFSET              ((STRIDESHAPE_X)*(STRIDESHAPE_Y) - (INITSTRIDESHAPE_X)*(INITSTRIDESHAPE_Y))
-#define TOT_CLASSIFICATIONS    (((REC_TIME*SAMPLE_RATE) - WINDOWSAMPLES)/(WINDOWSTRIDE) + 1)
-static const char *TAG = "Transform Tests";
+
 // Transform Configuration
 dl::audio::Fbank * transform=nullptr;
 static const uint16_t sizeoftransout = (STRIDESHAPE_X)*(STRIDESHAPE_Y);//25*40
@@ -69,7 +64,16 @@ float normalize(float x){
     return x*multiplier-subtract_val;
 }
 
-void shift(const float *input, uint16_t *input_shape) {
+template <typename T>
+void printValue(T value, size_t val_size ) {
+    std::cout << "The value is: " << value << std::endl;
+    for (size_t i = 0; i < val_size; i++){
+            value[i] = normalize(input[i]);
+            //printf("Quantize results: input: %f output: %d\n",input[i],write_ptr[i]);
+    }
+}
+
+void shift_scale(const float *input, uint16_t *input_shape) {
     /** Example Shifting:
      * x={{1,2,3},{4,5,6},{7,8,9}}
      * input = {8,9,10} \\ only considering the case where rows are different but columns are always the same
