@@ -51,7 +51,8 @@ class Kaldifbank(nn.Module):#Mel-filterbank
             window_type="rectangular",
             dither=0.0,
             preemphasis_coefficient=0.0,
-            snip_edges=True
+            snip_edges=True,
+            remove_dc_offset=True
         )
         # 1. Hard clamp extreme values to stabilize the distribution boundary
         # Typical the faucet fbank features sit well between -20 and 80 dB

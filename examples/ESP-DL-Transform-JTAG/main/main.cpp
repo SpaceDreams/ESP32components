@@ -1,8 +1,10 @@
 
-#include <dirent.h> // This is used to search through directories
+
 #include "dl_fbank.hpp"
 #include "math.h" //need pi use: M_PI
-#include "SDcard.h"
+#include "driver/usb_serial_jtag.h"
+#include "freertos/FreeRTOS.h"//Necessary for clock to time conversion
+#include "freertos/task.h" //Necessary for delays
 // Transform Configuration:
 #define NUM_MEL_BINS        40 //
 #define FRAME_LENGTH        20 //[ms] in milliseconds
@@ -63,7 +65,7 @@ void slicetransform(float * input, float * output){
         output[i] = normalize(output[i]);
 }
 
-bool run_classifier_init(){
+bool transform_init(){
     /** Audio buffers, pointers and selectors **/
     // Transform Configuration
     dl::audio::SpeechFeatureConfig config;
@@ -81,95 +83,70 @@ bool run_classifier_init(){
             ESP_LOGE(TAG, "Error, failed to assign model pointers!");
             return false;
     }
-/*    ESP_LOGI("DIAG", "transformoutput ptr: %p", (void *)transformoutput);
-ESP_LOGI("DIAG", "overlapbuff ptr: %p", (void *)overlapbuff);
-ESP_LOGI("DIAG", "model_input ptr: %p", (void *)model_input);
-    memset(transformoutput, 0, sizeoftransout*sizeof(transformoutput[0]));
-    ESP_LOGI("DIAG", "after setting transformoutput: overlapbuff ptr: %p", (void *)overlapbuff);
-    memset(overlapbuff, 0, sizeofoverlapbuff*sizeof(overlapbuff[0]));
-    ESP_LOGI("DIAG", "after setting overlapbuff model_input ptr: %p", (void *)model_input);
-    memset(model_input, 0, sizeofmodelinput*sizeof(model_input[0]));
-    ESP_LOGI(TAG, "Initialized Model");
-*/
     return true;
 }
 
-void read_and_transform(FILE * fin,FILE * fout){
-/* 
-    I need a function which does:
-    - reads one stride of data from the file f
-    - transforms that one stride of data
-    - opens binary file
-    - write the transformed data to the end of the binary file
-*/
-    if (fin == NULL || fout==NULL) {
-        ESP_LOGE("MAIN", "Failed to open file!");
-        return; // Stop here! Do not proceed to read_and_transform
-    }
-    struct stat st;
-    size_t fileSize=0;
-    if (fstat(fileno(fin), &st) == 0)
-        fileSize = st.st_size;
-    else
-        ESP_LOGE(TAG, "Failed to get file status");
-    uint32_t totwrittenbytes=0;
-    const size_t wav_header_size=44;//bytes
-    fseek(fin, wav_header_size, SEEK_SET);//The wave header is 44 bytes
-    for(uint32_t i=0; i<=(fileSize-wav_header_size)/3-WINDOWSTRIDE; i+=WINDOWSTRIDE){
-        for(int j=0; j<WINDOWSTRIDE; j++){
-            uint32_t dum =0;
-            for(int k=0; k<3; k++)
-                dum|=(uint32_t)fgetc(fin)<<k*8;
-            // If the 24th bit is 1, it's a negative number; sign-extend it to 32 bits
-            if (dum & 0x00800000)
-                dum |= 0xFF000000;
-            transforminput[j]=(float)dum;
-        }
-        size_t size_out=(STRIDESHAPE_X)*(STRIDESHAPE_Y);
-        if((i%WINDOWSAMPLES)==0){
-            inittransform(transforminput,transformoutput);
-            size_out=(INITSTRIDESHAPE_X)*(INITSTRIDESHAPE_Y);
-        }
-        else
-            slicetransform(transforminput,transformoutput);
-        fwrite(transformoutput,sizeof(float),size_out,fout);
-        totwrittenbytes+=sizeof(float)*size_out;
-    }
-    ESP_LOGI(TAG, "Total Written byes: %ld",totwrittenbytes);
-}
-
 extern "C" void app_main(void){
-    mount_sdcard();
-    const char * faucetoffdir = SD_MOUNT_POINT"/TrainingData/faucetoff";
-    FILE * fout = init_file("FaucetTransforms_Off.bin");
-    DIR *nofaucetdir = opendir(faucetoffdir);
-    if (nofaucetdir == NULL) {
-        ESP_LOGE(TAG, "Could Not Open Directory");
-        return;
-    }
+    // Configure USB SERIAL JTAG
+    usb_serial_jtag_driver_config_t usb_serial_jtag_config = {
+        .tx_buffer_size = sizeof(float)*sizeoftransout,
+        .rx_buffer_size = sizeof(float)*WINDOWSTRIDE,
+    };
+    ESP_LOGI(TAG, "USB_SERIAL_JTAG init done");
+
+    ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&usb_serial_jtag_config));
     // Now I can initalize the classifier
-    if (run_classifier_init() == false) {
-        ESP_LOGE(TAG, "Error Initializing Model");
+    if (transform_init() == false) {
+        ESP_LOGE(TAG, "Error Initializing Transform");
         return;
     }
-    // now I can loop through everything
-    struct dirent *entry;
-    while((entry = readdir(nofaucetdir)) != NULL)
+    while(true)
     {
-        if (!(entry->d_type == DT_REG || entry->d_type == DT_UNKNOWN)) continue;
-        char *filename = entry->d_name;
-        int len = strlen(filename);
-        if (!(len > 4 && strcmp(filename + len - 4, ".wav") == 0)) continue;
-        int dirlen=strlen(faucetoffdir);
-        size_t namesize = (len+1+dirlen+1);
-        char * full_path = (char *)malloc(namesize*sizeof(char));
-        snprintf(full_path, namesize, "%s/%s", faucetoffdir, filename);
-        printf("%s\n",full_path );
-        FILE *fin = fopen(full_path, "rb");
-        read_and_transform(fin,fout);
-        fclose(fin);
+        // 1. Read the 1-byte Info header
+        uint8_t init = 0x00;//This is used as an initializer
+        int init_read = usb_serial_jtag_read_bytes(&init, 1, 20 / portTICK_PERIOD_MS);
+        // 1.1. Read the 2-byte length header
+        uint16_t payload_len = 0;
+        int len_read = usb_serial_jtag_read_bytes((uint8_t *)&payload_len, 2, 20 / portTICK_PERIOD_MS);
+        if (init_read!= 1 || len_read != 2 || payload_len > sizeof(float)*WINDOWSTRIDE)
+            continue;
+        ESP_LOGI(TAG, "Total payload length: %d",payload_len);
+        // 2. Read the chunk payload fully
+        uint16_t total_received = 0;
+        while (total_received < payload_len) {
+            int n = usb_serial_jtag_read_bytes(
+                ((uint8_t *)transforminput) + total_received, 
+                payload_len - total_received, 
+                50 / portTICK_PERIOD_MS
+            );
+            if (n > 0)
+                total_received += n;
+            else
+                break;
+        }
+        fflush(stdout);
+        vTaskDelay(50 / portTICK_PERIOD_MS);
+        ESP_LOGI(TAG, "Total Recieved bytes: %d",total_received);
+        fflush(stdout);
+        vTaskDelay(50 / portTICK_PERIOD_MS);
+        if (total_received == payload_len) {
+            // Send ACK back to Python
+            uint8_t ack = 0x06;
+            usb_serial_jtag_write_bytes(&ack, 1, 20 / portTICK_PERIOD_MS);
+            uint16_t size_out=(STRIDESHAPE_X)*(STRIDESHAPE_Y);
+            if(init != 0x00){
+                inittransform(transforminput,transformoutput);
+                size_out=(INITSTRIDESHAPE_X)*(INITSTRIDESHAPE_Y);
+            }
+            else
+                slicetransform(transforminput,transformoutput);
+            fflush(stdout);
+            vTaskDelay(50 / portTICK_PERIOD_MS);
+            // 1. Send the 2-byte length header first
+            usb_serial_jtag_write_bytes((uint8_t *)&size_out, sizeof(size_out), 20 / portTICK_PERIOD_MS);
+            // 2. Send the actual float data payload
+            usb_serial_jtag_write_bytes((uint8_t *)transformoutput, size_out*sizeof(transformoutput[0]), 20 / portTICK_PERIOD_MS);
+            ESP_LOGI(TAG, "Total Transmitted bytes: %d",size_out*sizeof(transformoutput[0]));
+        }
     }
-    fclose(fout);
-    closedir(nofaucetdir);
-    unmount_sdcard();
 }
