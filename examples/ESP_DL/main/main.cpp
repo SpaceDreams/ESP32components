@@ -134,7 +134,7 @@ extern "C" void app_main(){
     nvs_handle_t my_handle = get_counter(&boot_counter);
     boot_counter = boot_counter%3;//This is the number of cases; this way I don't have to reset the flash after 3 boots
     const char *classification_cases[] = {"faucet_off","faucet_on","faucet_onoff"};
-    int length = snprintf(NULL, 0, "faucetfile_16bit_%s_espdl.wav", classification_cases[boot_counter]);
+    int length = snprintf(NULL, 0, "faucetfile_24bit_%s_espdl.wav", classification_cases[boot_counter]);
     char *wavfilename = (char *)malloc((length + 1)* sizeof(char));
     snprintf(wavfilename, length + 1, "faucetfile_24bit_%s_espdl.wav", classification_cases[boot_counter]);
 
@@ -179,7 +179,7 @@ extern "C" void app_main(){
     ESP_LOGI(TAG, "Completed Modeling");
     if(xSemaphoreTake(ShutDownI2S, portMAX_DELAY) != pdTRUE) ESP_LOGI(TAG, "Took too long to finish Shutting Down I2S");
     // Create the filename for the predictions
-    length = snprintf(NULL, 0, "inference_logs_16bit_%s_espdl.txt", classification_cases[boot_counter]);
+    length = snprintf(NULL, 0, "inference_logs_24bit_%s_espdl.txt", classification_cases[boot_counter]);
     char *inferencefilename = (char *)malloc((length + 1)* sizeof(char));
     snprintf(inferencefilename, length + 1, "inference_logs_24bit_%s_espdl.txt", classification_cases[boot_counter]);
     FILE* inference_logs = init_file(inferencefilename);

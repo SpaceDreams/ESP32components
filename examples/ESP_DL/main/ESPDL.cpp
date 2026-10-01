@@ -19,7 +19,7 @@ static const uint16_t sizeofoverlapbuff = WINDOWSTRIDE+OVERLAP;
 static float overlapbuff[sizeofoverlapbuff];
 //Model Configuration
 // The symbol name is composed of three parts: prefix "_binary_", filename "signaldect_espdl", and suffix "_start"
-extern const uint8_t model_espdl[] asm("_binary_signaldect_2d_efloor_espdl_start"); //
+extern const uint8_t model_espdl[] asm("_binary_signaldect_2D_ESP32_espdl_start"); //
 dl::Model *model = nullptr;
 // Assigns the first 
 dl::TensorBase *model_input = nullptr;
@@ -51,7 +51,7 @@ float normalize(const float x){
 		res = 1.0f;
 	else if(x<min_val)
 		res=-1.0f;
-    return res
+    return res;
 }
 
 
