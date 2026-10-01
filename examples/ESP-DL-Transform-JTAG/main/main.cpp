@@ -89,9 +89,10 @@ bool transform_init(){
 extern "C" void app_main(void){
     // Configure USB SERIAL JTAG
     usb_serial_jtag_driver_config_t usb_serial_jtag_config = {
-        .tx_buffer_size = sizeof(float)*sizeoftransout,
-        .rx_buffer_size = sizeof(float)*WINDOWSTRIDE,
+        .tx_buffer_size = 1024,//These don't have to be large as long as reading/writing is done quickly
+        .rx_buffer_size = 1024,
     };
+    uint8_t ack = 0x06;
     ESP_LOGI(TAG, "USB_SERIAL_JTAG init done");
 
     ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&usb_serial_jtag_config));
@@ -100,39 +101,50 @@ extern "C" void app_main(void){
         ESP_LOGE(TAG, "Error Initializing Transform");
         return;
     }
+
     while(true)
     {
-        // 1. Read the 1-byte Info header
-        uint8_t init = 0x00;//This is used as an initializer
-        int init_read = usb_serial_jtag_read_bytes(&init, 1, 20 / portTICK_PERIOD_MS);
-        // 1.1. Read the 2-byte length header
-        uint16_t payload_len = 0;
-        int len_read = usb_serial_jtag_read_bytes((uint8_t *)&payload_len, 2, 20 / portTICK_PERIOD_MS);
-        if (init_read!= 1 || len_read != 2 || payload_len > sizeof(float)*WINDOWSTRIDE)
+        // 1.1. Read the 3-byte length header
+        uint8_t header[3] = {0};
+        int len_read = usb_serial_jtag_read_bytes(header, 3, 2000 / portTICK_PERIOD_MS);
+        uint16_t payload_len = (((uint16_t)header[2])<<8)|header[1];
+        uint8_t init = header[0]; // This is the initializer; it's 0x00 if the first chunk of data
+        if (len_read != 3 || payload_len > sizeof(float)*WINDOWSTRIDE)
             continue;
         ESP_LOGI(TAG, "Total payload length: %d",payload_len);
+        //fflush(stdout);
+        //vTaskDelay(2 / portTICK_PERIOD_MS);
+        usb_serial_jtag_write_bytes(&ack, 1, 2000 / portTICK_PERIOD_MS);
         // 2. Read the chunk payload fully
         uint16_t total_received = 0;
-        while (total_received < payload_len) {
+        while ( total_received < payload_len ) {
+            // 1. Guard against silent overflow
+            if (payload_len > sizeof(float)*WINDOWSTRIDE) {
+                printf("ERROR: Overflow risk! Payload size (%d bytes) is larger than buffer (%d bytes)\n", 
+                    payload_len, sizeof(float)*WINDOWSTRIDE);
+                fflush(stdout);
+                vTaskDelay(2000 / portTICK_PERIOD_MS);
+                return; // Abort or handle the error safely
+            }
             int n = usb_serial_jtag_read_bytes(
                 ((uint8_t *)transforminput) + total_received, 
                 payload_len - total_received, 
-                50 / portTICK_PERIOD_MS
+                10000 / portTICK_PERIOD_MS
             );
-            if (n > 0)
-                total_received += n;
-            else
+            if (n <= 0){
+                ESP_LOGI(TAG, "Read timeout or disconnected");
+                fflush(stdout);
+                vTaskDelay(2000 / portTICK_PERIOD_MS);
                 break;
+            }
+            total_received += n;
         }
-        fflush(stdout);
-        vTaskDelay(50 / portTICK_PERIOD_MS);
         ESP_LOGI(TAG, "Total Recieved bytes: %d",total_received);
-        fflush(stdout);
-        vTaskDelay(50 / portTICK_PERIOD_MS);
+        //fflush(stdout);
+        //vTaskDelay(2000 / portTICK_PERIOD_MS);
         if (total_received == payload_len) {
             // Send ACK back to Python
-            uint8_t ack = 0x06;
-            usb_serial_jtag_write_bytes(&ack, 1, 20 / portTICK_PERIOD_MS);
+            usb_serial_jtag_write_bytes(&ack, 1, 2000 / portTICK_PERIOD_MS);
             uint16_t size_out=(STRIDESHAPE_X)*(STRIDESHAPE_Y);
             if(init != 0x00){
                 inittransform(transforminput,transformoutput);
@@ -140,12 +152,14 @@ extern "C" void app_main(void){
             }
             else
                 slicetransform(transforminput,transformoutput);
-            fflush(stdout);
-            vTaskDelay(50 / portTICK_PERIOD_MS);
             // 1. Send the 2-byte length header first
-            usb_serial_jtag_write_bytes((uint8_t *)&size_out, sizeof(size_out), 20 / portTICK_PERIOD_MS);
+            usb_serial_jtag_write_bytes((uint8_t *)&size_out, sizeof(size_out), 2000 / portTICK_PERIOD_MS);
+            uint8_t rxAck=0;
+            usb_serial_jtag_read_bytes(&rxAck, 1, 2000 / portTICK_PERIOD_MS);
+            if (rxAck!=ack)
+                ESP_LOGI(TAG, "Python has not Acknoledged");
             // 2. Send the actual float data payload
-            usb_serial_jtag_write_bytes((uint8_t *)transformoutput, size_out*sizeof(transformoutput[0]), 20 / portTICK_PERIOD_MS);
+            usb_serial_jtag_write_bytes((uint8_t *)transformoutput, size_out*sizeof(transformoutput[0]), 10000 / portTICK_PERIOD_MS);
             ESP_LOGI(TAG, "Total Transmitted bytes: %d",size_out*sizeof(transformoutput[0]));
         }
     }
