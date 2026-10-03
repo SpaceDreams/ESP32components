@@ -35,7 +35,7 @@ void slicetransform(const float * input, float * output){
     memmove(overlapbuff,&overlapbuff[WINDOWSTRIDE],OVERLAP*sizeof(overlapbuff[0]));
 }
 
-float normalize(const float x){
+__attribute__((const)) float normalize(const float x){
     //# 1. Normalize to a predictable, tight range (e.g., -1.0 to 1.0)
     //# This prevents the Power-of-Two scale from leaving huge empty gaps in the INT8 range
     //fbank_normalized = 2.0 * (fbank - (-20.0)) / (80.0 - (-20.0)) - 1.0
@@ -69,7 +69,6 @@ void shift_and_quantize_direct(const float *input, uint16_t *input_shape) {
      * **/
 	const std::vector<int> shape = model_input->get_shape();
     int8_t *tensor_ptr = (int8_t *)model_input->get_element_ptr();
-    float scale = DL_RESCALE(model_input->exponent);
     // 1. Shift old quantized tensor data left
     size_t shiftpoint = input_shape[0]*input_shape[1];
     size_t shiftsize = shape[1]*shape[2] - shiftpoint;
@@ -77,7 +76,7 @@ void shift_and_quantize_direct(const float *input, uint16_t *input_shape) {
     // 2. Quantize new incoming floats directly into the right end of the tensor
     int8_t *write_ptr = &tensor_ptr[shiftsize];
     for (size_t i = 0; i < shiftpoint; i++){
-            write_ptr[i] = dl::quantize<int8_t>(normalize(input[i]), scale);
+            write_ptr[i] = dl::quantize<int8_t>(normalize(input[i]), DL_RESCALE(model_input->exponent));
             //printf("Quantize results: input: %f output: %d\n",input[i],write_ptr[i]);
         }
 }
@@ -91,15 +90,12 @@ void apply_softmax(const float* input, int size, float* output) {
             max_val = input[i];
         }
     }
-
     // Compute the sum of exponents
     float sum = 0.0f;
     for (int i = 0; i < size; i++) {
         output[i] = expf(input[i] - max_val);
         sum += output[i];
     }
-    printf("\n");
-
     // Normalize elements to sum up to 1.0 (100%)
     for (int i = 0; i < size; i++) {
         output[i] /= sum;
@@ -164,15 +160,12 @@ void run_classifier_continuous(float * input, float *output)
 	uint16_t strideshape[2] = {STRIDESHAPE_X,STRIDESHAPE_Y};
 	uint16_t initstrideshape[2] = {INITSTRIDESHAPE_X,INITSTRIDESHAPE_Y};
 	uint16_t * shape = strideshape;
-    float * pnt2transformoutput = transformoutput;
 	if(!(init_count>0)){
 		shape = initstrideshape;
-        pnt2transformoutput = &transformoutput[OFFSET];
-		inittransform(input, pnt2transformoutput);
-	} else {
-		slicetransform(input,pnt2transformoutput);
-	}
-	shift_and_quantize_direct(pnt2transformoutput,shape);
+		inittransform(input, transformoutput);
+	} else
+		slicetransform(input,transformoutput);
+	shift_and_quantize_direct(transformoutput,shape);
 	if (init_count>=WINDOWSAMPLES)
 	{
 		model->run();

@@ -8,17 +8,13 @@ static const char *TAG = "ESP-DL Testing";
 extern "C" bool audio_callback(uint8_t* raw_buffer, size_t n_bytes, struct sampleArgs* Args)
 {  // There is a catch here; i2s is 24 bit; so 
     bool keep_reading_i2s = true;
-    for (int i = 0; i < n_bytes/3; i++) {
+    for (int i = 0; i < n_bytes; i+=3) {
         uint32_t packed_data = 0;
         for (int j = 0; j<3; j++)
-            packed_data |= (uint32_t)raw_buffer[j]<<(8*j);
+            packed_data |= (uint32_t)raw_buffer[i+j]<<(8*j+8);// Added a byte here to easily perform sign extension later
+        int32_t res = static_cast<int32_t>(packed_data);
         // Perform Sign Extension (Crucial for negative sound wave numbers)
-        // A 24-bit signed number has its sign bit at bit position 23.
-        // If bit 23 is a 1, the number is negative, and we must fill the top 8 bits with 1s.
-        if (packed_data & 0x00800000)
-                packed_data |= 0xFF000000; // Force top byte to be negative padding
-        int32_t res = static_cast<int32_t>(packed_data);//Cast to a signed int first then float
-        streameddata.buffers[streameddata.buf_select][streameddata.buf_count] = static_cast<float>(res);
+        streameddata.buffers[streameddata.buf_select][streameddata.buf_count] = static_cast<float>(res>>8);
         streameddata.buf_count++;
         if(streameddata.buf_count >= streameddata.n_samples) {
             streameddata.buf_select ^= 1;

@@ -26,7 +26,7 @@
 #define WINDOWSTRIDE        WINDOWSAMPLES/4 //The minimum number is (frame_length*Sample_Rate)
 
 // Saving data:
-#define REC_TIME            10 // seconds
+#define REC_TIME            60 // seconds
 #define TOTSAMPLES          (REC_TIME*SAMPLE_RATE)
 #define TOT_CLASSIFICATIONS    (TOTSAMPLES - WINDOWSAMPLES)/(WINDOWSTRIDE) + 1
 

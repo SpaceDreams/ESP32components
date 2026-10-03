@@ -8,7 +8,7 @@ float transformedData[MODELINPUTSHAPE_X*MODELINPUTSHAPE_Y]={0}; //This is big, s
 
 extern "C" void app_main(){
     mount_sdcard();
-    const char * faucetoffdir = SD_MOUNT_POINT"/fauceton";
+    const char * faucetoffdir = SD_MOUNT_POINT"/fauceton_ESP32";
     DIR *nofaucetdir = opendir(faucetoffdir);
     if (nofaucetdir == NULL) {
         ESP_LOGE(TAG, "Could Not Open Directory");

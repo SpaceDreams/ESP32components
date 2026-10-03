@@ -1,9 +1,7 @@
 
-#include "ESPDL.hpp"
-static const char *TAG = "ESP-DL";
+#include "model.hpp"
+static const char *TAG = "ESP-DL Model";
 //Model Configuration
-// The symbol name is composed of three parts: prefix "_binary_", filename "signaldect_espdl", and suffix "_start"
-extern const uint8_t model_espdl[] asm("_binary_signaldect_2D_ESP32_espdl_start"); //
 dl::Model *model = nullptr;
 // Assigns the first 
 dl::TensorBase *model_input = nullptr;
