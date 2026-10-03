@@ -171,9 +171,9 @@ extern "C" void app_main(){
         curr_samples += WINDOWSTRIDE;
         if (curr_samples<WINDOWSAMPLES) continue;
         curr_classifications++;
-        printf("Classifier Results: Faucet off: %d Faucet on: %d\n",
-            classification_results[curr_classifications][curr_classifications-1][0],
-            classification_results[curr_classifications][curr_classifications-1][1]);
+        printf("Classifier Results: Faucet off: %f Faucet on: %f\n",
+            classification_results[curr_classifications-1][0],
+            classification_results[curr_classifications-1][1]);
     }
     ESP_LOGI(TAG, "Completed Modeling");
     if(xSemaphoreTake(ShutDownI2S, portMAX_DELAY) != pdTRUE) ESP_LOGI(TAG, "Took too long to finish Shutting Down I2S");
