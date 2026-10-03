@@ -49,7 +49,7 @@ void mount_sdcard(void)
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
         .format_if_mount_failed = false,
         .max_files = 5,
-        .allocation_unit_size = 16 * 1024
+        .allocation_unit_size = 0// Setting to 0 uses the existing card's allocation size
     };
     const char *mount_point = SD_MOUNT_POINT;
     ESP_LOGI(SDTAG, "Initializing SD card");

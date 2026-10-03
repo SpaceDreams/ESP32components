@@ -109,7 +109,7 @@ void dequantize_model_output(float * probabilities) {
     float scale = DL_SCALE(model_output->exponent);
     // Cast the raw array pointer (Use int8_t* since the model is quantized to 8-bits)
     int8_t* raw_output_ptr = (int8_t*)model_output->get_element_ptr();
-    printf("Logits Results: Faucet off: %d Faucet on: %d\n",raw_output_ptr[0],raw_output_ptr[1]);
+    //printf("Logits Results: Faucet off: %d Faucet on: %d\n",raw_output_ptr[0],raw_output_ptr[1]);
     // Allocate arrays for calculation
     float dequantized_logits[total_elements];
 
@@ -166,11 +166,10 @@ void run_classifier_continuous(float * input, float *output)
 	} else
 		slicetransform(input,transformoutput);
 	shift_and_quantize_direct(transformoutput,shape);
-	if (init_count>=WINDOWSAMPLES)
-	{
-		model->run();
-		dequantize_model_output(output);
-	}
-	else
-		init_count += WINDOWSTRIDE;
+	if (init_count<WINDOWSAMPLES){
+        init_count += WINDOWSTRIDE;
+        return;
+    }
+    model->run();
+    dequantize_model_output(output);
 }

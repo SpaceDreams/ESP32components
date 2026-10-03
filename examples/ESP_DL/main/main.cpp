@@ -129,7 +129,7 @@ extern "C" void app_main(){
     int32_t boot_counter = 0;
     nvs_handle_t my_handle = get_counter(&boot_counter);
     boot_counter = boot_counter%3;//This is the number of cases; this way I don't have to reset the flash after 3 boots
-    const char *classification_cases[] = {"faucet_off","faucet_on","faucet_onoff"};
+    const char *classification_cases[] = {"faucet_off","faucet_onoff","faucet_on"};
     int length = snprintf(NULL, 0, "faucetfile_24bit_%s_espdl.wav", classification_cases[boot_counter]);
     char *wavfilename = (char *)malloc((length + 1)* sizeof(char));
     snprintf(wavfilename, length + 1, "faucetfile_24bit_%s_espdl.wav", classification_cases[boot_counter]);
@@ -171,6 +171,9 @@ extern "C" void app_main(){
         curr_samples += WINDOWSTRIDE;
         if (curr_samples<WINDOWSAMPLES) continue;
         curr_classifications++;
+        printf("Classifier Results: Faucet off: %d Faucet on: %d\n",
+            classification_results[curr_classifications][curr_classifications-1][0],
+            classification_results[curr_classifications][curr_classifications-1][1]);
     }
     ESP_LOGI(TAG, "Completed Modeling");
     if(xSemaphoreTake(ShutDownI2S, portMAX_DELAY) != pdTRUE) ESP_LOGI(TAG, "Took too long to finish Shutting Down I2S");
