@@ -1,13 +1,14 @@
 
-#include "model.hpp"
-static const char *TAG = "ESP-DL Model";
+#include "ESPDL.hpp"
+static const char *TAG = "ESP-DL";
 //Model Configuration
+// The symbol name is composed of three parts: prefix "_binary_", filename "signaldect_espdl", and suffix "_start"
+extern const uint8_t model_espdl[] asm("_binary_signaldect_2D_ESP32_espdl_start"); //
 dl::Model *model = nullptr;
 // Assigns the first 
 dl::TensorBase *model_input = nullptr;
 dl::TensorBase *model_output = nullptr;
-// The symbol name is composed of three parts: prefix "_binary_", filename "_espdl", and suffix "_start"
-extern const uint8_t model_espdl[] asm("_binary_"MODELFILENAME"_espdl_start"); //
+
 
 void quantize_direct(const float *input, uint16_t *input_shape) {
     int8_t *tensor_ptr = (int8_t *)model_input->get_element_ptr();
@@ -77,27 +78,10 @@ bool run_classifier_init(){
     return true;
 }
 
-void quantize_and_run_classifier(const float * input, float *output)
+void run_classifier_continuous(const float * input, float *output)
 {
 	uint16_t modelshape[2] = {MODELINPUTSHAPE_X,MODELINPUTSHAPE_Y};
 	quantize_direct(input,modelshape);
 	model->run();
 	dequantize_model_output(output);
-}
-
-void run_classifier(float *output)
-{
-    model->run();
-    dequantize_model_output(output);
-}
-
-int8_t quantize(float a){
-    return dl::quantize<int8_t>(a, DL_RESCALE(model_input->exponent)); 
-}
-
-ModelInput getModelInput(){
-    const std::vector<uint16_t> shape = model_input->get_shape();
-    int8_t *tensor_ptr = (int8_t *)model_input->get_element_ptr();
-    ModelInput res = {.input=tensor_ptr,.shape={shape[1],shape[2]}};
-    return res;
 }
