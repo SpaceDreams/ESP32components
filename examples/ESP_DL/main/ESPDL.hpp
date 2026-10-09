@@ -10,7 +10,7 @@
 #endif
 
 #ifndef WINDOWSTRIDE
-#define WINDOWSTRIDE        WINDOWSAMPLES/4 //The minimum number is (frame_length*Sample_Rate)
+#define WINDOWSTRIDE        WINDOWSAMPLES/4 // The minimum number is (frame_length*Sample_Rate)
 #endif
 
 

@@ -18,5 +18,5 @@ include(${cmake_dir}/utilities.cmake)
 set(embed_files signaldect_2D_ESP32.espdl)
 
 
-target_add_aligned_binary_data(${COMPONENT_LIB} ${embed_files} BINARY)
+target_add_aligned_binary_data(${CMAKE_PROJECT_NAME}.elf ${embed_files} BINARY)
 

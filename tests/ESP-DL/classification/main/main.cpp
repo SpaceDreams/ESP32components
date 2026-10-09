@@ -7,7 +7,17 @@
 #define MODELINPUTSHAPE_Y        (40)//num_of_mel_banks
 #define MODELFILENAME           "signaldect_2D_ESP32"
 #define CLASSIFIERTEST "fauceton"
-#include "model.hpp"
+#include <math.h>
+#include "freertos/FreeRTOS.h"
+#include "SDcard.h"
+#define MODELCONFIG
+#define CLASSIFIER_LABEL_COUNT 2
+#define CLASSIFIER_LABELS      {"Faucet is Off", "Faucet is On"}
+#define MODELINPUTSHAPE_X       (25*3+24) //3*strideslice+initstrideslice
+#define MODELINPUTSHAPE_Y        (40)//num_of_mel_banks
+#define MODELFILENAME           "signaldect_2D_ESP32"
+
+#include "model.h"//loaded after the model configuration is defined
 
 static const char *TAG = "ESP-DL Testing";
 float transformedData[MODELINPUTSHAPE_X*MODELINPUTSHAPE_Y]={0}; //This is big, so initializing now moves off the main segment of dram so it's not included in app memory 
