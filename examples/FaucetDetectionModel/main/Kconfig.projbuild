@@ -1,0 +1,9 @@
+menu "Model Configuration"
+
+    config MODEL_FILENAME
+        string "ESPDL Model Filename exculding the .espdl"
+        default "signaldect_2D_ESP32"
+        help
+            The name of the .espdl model file located in the target directory.
+
+endmenu
