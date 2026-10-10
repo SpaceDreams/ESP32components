@@ -15,8 +15,6 @@ dependencies:
   #   # All dependencies of `main` are public by default.
   #   public: true
   transforms:
-    git: https://github.com/SpaceDreams/ESP32components.git
-    path: ESP-DL/transforms
+    path: "../transforms"
   classification:
-    git: https://github.com/SpaceDreams/ESP32components.git
-    path: ESP-DL/classification
+    path: "../classification"
