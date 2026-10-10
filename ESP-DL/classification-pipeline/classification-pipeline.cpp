@@ -2,9 +2,9 @@
 #include "model.hpp"
 
 
-bool transform_and_classify_init(){
+bool transform_and_classify_init(const uint8_t * model_espdl){
 	bool flag=false;
-	if(init_transform() && run_classifier_init())
+	if(init_transform() && run_classifier_init(model_espdl))
 		flag= true;
 	return flag;
 }
@@ -23,5 +23,5 @@ void transform_and_classify(const float * input, float *output)
         init_count += WINDOWSTRIDE;
         return;
     }
-    run_classifier()
+    run_classifier(output);
 }

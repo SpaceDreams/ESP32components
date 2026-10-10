@@ -16,8 +16,8 @@
     _res; /* This acts as the return value */ \
 })
 
-template <typename T, typename Op=int>
-void shift_and_scale(const float *input, uint16_t *input_shape, T * output, uint16_t * output_shape, Op f=0) {
+template <typename T1, typename T2, typename Op=int>
+void shift_and_scale(const float *input, uint16_t *input_shape, T1 * output, T2 * output_shape, Op f=0) {
     /** Example Shifting:
      * x={{1,2,3},{4,5,6},{7,8,9}}
      * input = {8,9,10} \\ only considering the case where rows are different but columns are always the same
@@ -38,8 +38,8 @@ void shift_and_scale(const float *input, uint16_t *input_shape, T * output, uint
     for (size_t i = 0; i < shiftpoint; i++){
         float res = NORMALIZE_AND_CLIP(input[i]);
         if constexpr (std::is_invocable_v<Op>)
-            write_ptr[i] = static_cast<T>(f(res));
+            write_ptr[i] = static_cast<T1>(f(res));
         else
-            write_ptr[i] = static_cast<T>(res);
+            write_ptr[i] = static_cast<T1>(res);
     }
 }

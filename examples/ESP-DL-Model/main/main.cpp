@@ -8,7 +8,7 @@ float transformedData[MODELINPUTSHAPE_X*MODELINPUTSHAPE_Y]={0}; //This is big, s
 
 extern "C" void app_main(){
     mount_sdcard();
-    const char * faucetoffdir = SD_MOUNT_POINT"/fauceton_ESP32";
+    const char * faucetoffdir = SD_MOUNT_POINT"/faucetoff_ESP32";
     DIR *nofaucetdir = opendir(faucetoffdir);
     if (nofaucetdir == NULL) {
         ESP_LOGE(TAG, "Could Not Open Directory");
@@ -38,7 +38,7 @@ extern "C" void app_main(){
         fclose(file);
         float classification_results[]={0.0f,0.0f};
         run_classifier_continuous(transformedData, classification_results);
-        printf("Expected Results is the Facet is on, got: %f faucetoff, %f fauceton\n",classification_results[0],classification_results[1]);
+        printf("Expected Results is the Facet is off, got: %f faucetoff, %f fauceton\n",classification_results[0],classification_results[1]);
     }
     closedir(nofaucetdir);
     unmount_sdcard();

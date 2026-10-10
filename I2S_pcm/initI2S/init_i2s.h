@@ -38,7 +38,7 @@
 #define interrupt_interval_max       (INIT_I2S_DMA_FRAME_NUM  / (INIT_AUDIO_SAMPLE_RATE/1000) ) // For 24 bit: 28
                                      // Careful with units, Here I want polling cycle and interrupt interval to have the same units
 #define dma_desc_num_min             ((INIT_POLLING_CYCLE / interrupt_interval_max) + 1) //adding one is for the ceiling function // For 24 bit: 4
-#define recv_buffer_size_min         (dma_desc_num_min) * (dma_buffer_size_max) // 2*4092 =8184
+#define recv_buffer_size_min         ((dma_desc_num_min) * (dma_buffer_size_max) )// 2*4092 =8184
 
 /* I2S DMA configuration */
 #define INIT_I2S_DMA_DESC_NUM        (dma_desc_num_min)

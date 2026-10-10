@@ -28,7 +28,7 @@ void quantize_direct(const float *input) {
     */
     const std::vector<int> shape = model_input->get_shape();
     int8_t *tensor_ptr = (int8_t *)model_input->get_element_ptr();
-    for (size_t i = 0; i < shape[0]*shape[1]; i++)
+    for (size_t i = 0; i < shape[1]*shape[2]; i++)
             tensor_ptr[i] = quantize(input[i]);
 }
 
@@ -97,9 +97,11 @@ void dequantize_model_output(float * probabilities) {
 
 /* These are the public facing functions used to run the model */
 
-bool run_classifier_init(){
+bool run_classifier_init(const uint8_t * model_espdl){
     /**
-    * \brief Basic usage - loads model with default parameters
+    * \brief Basic usage - loads model with default parameters and assumes the model is located in Flash RODATA
+    * 
+    * \param *model_espdl this is the assembly file that is loaded in the main app script
     */
     model = new dl::Model((const char *)model_espdl, fbs::MODEL_LOCATION_IN_FLASH_RODATA);
     ESP_ERROR_CHECK(model->test());
@@ -140,11 +142,11 @@ void run_classifier(float *output)
     dequantize_model_output(output);
 }
 
-/*
+
 ModelInput getModelInput(){
     const std::vector<int> shape = model_input->get_shape();
     int8_t *tensor_ptr = (int8_t *)model_input->get_element_ptr();
-    ModelInput res = {.input=tensor_ptr,.shape={shape[1],shape[2]}};
+    ModelInput res = {.input=tensor_ptr,.shape=&shape[1]};
     return res;
 }
-*/
+

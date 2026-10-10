@@ -3,7 +3,7 @@
 
 typedef struct {
     int8_t * input;
-    std::vector<int> shape;
+    int* shape;
 } ModelInput;
 
 ModelInput getModelInput();
