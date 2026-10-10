@@ -14,5 +14,7 @@ dependencies:
   #   # `public` flag doesn't have an effect dependencies of the `main` component.
   #   # All dependencies of `main` are public by default.
   #   public: true
-  classification-pipeline:
-    path: "classification-pipeline"
+  transforms:
+    path: "transforms"
+  classification:
+    path: "classification"

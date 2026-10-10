@@ -1,1 +1,1 @@
-idf_component_register(SRCS "ESP-DL.c")
+idf_component_register(SRCS "classification-pipeline.cpp")
