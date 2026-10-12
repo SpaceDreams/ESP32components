@@ -123,10 +123,10 @@ void app_main(){
     gpio_set_level(ENABLE_MIC_PIN, 1);
 
     // This is for setting up multiple cases:
+    const char *classification_cases[] = {"faucet_off","faucet_onoff","faucet_on"};
     int32_t boot_counter = 0;
     nvs_handle_t my_handle = get_counter(&boot_counter);
     boot_counter = boot_counter%3;//This is the number of cases; this way I don't have to reset the flash after 3 boots
-    const char *classification_cases[] = {"faucet_off","faucet_onoff","faucet_on"};
     int length = snprintf(NULL, 0, "faucetfile_24bit_%s_espdl.wav", classification_cases[boot_counter]);
     char *wavfilename = (char *)malloc((length + 1)* sizeof(char));
     snprintf(wavfilename, length + 1, "faucetfile_24bit_%s_espdl.wav", classification_cases[boot_counter]);

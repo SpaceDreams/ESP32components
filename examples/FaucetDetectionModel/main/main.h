@@ -26,7 +26,7 @@
 #define TOTSAMPLES          (REC_TIME*SAMPLE_RATE)
 #define TOT_CLASSIFICATIONS    (TOTSAMPLES - WINDOWSAMPLES)/(WINDOWSTRIDE) + 1
 
-// This file will create two tasks, one which does classifying another which does saving. 
+// This file will creates a task which reads and saves I2S data. 
 typedef struct { // To save space this buffer takes bytes; this way the 3 byte mic is saved directly 
                  //    instead of converting it to a 32bit integer.
     float buffers[2][WINDOWSTRIDE]; 
