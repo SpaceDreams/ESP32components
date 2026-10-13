@@ -146,7 +146,7 @@ void run_classifier(float *output)
 ModelInput getModelInput(){
     const std::vector<int> shape = model_input->get_shape();
     int8_t *tensor_ptr = (int8_t *)model_input->get_element_ptr();
-    const int * shapepnt[]={shape[1],shape[2]};
+    int shapepnt[2]={shape[1],shape[2]};
     ModelInput res = {.input=tensor_ptr,.shape=shapepnt};
     return res;
 }
