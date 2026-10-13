@@ -1,6 +1,8 @@
 #include "main.h"
 
 static const char *TAG = "ESP-DL Testing";
+// The symbol name is composed of three parts: prefix "_binary_", filename "signaldect_espdl", and suffix "_start"
+extern const uint8_t model_espdl[] asm("_binary_"MODELFILENAME"_espdl_start"); //
 
 bool audio_callback(uint8_t* raw_buffer, size_t n_bytes, struct sampleArgs* Args)
 {  // There is a catch here; i2s is 24 bit; so 
@@ -9,9 +11,9 @@ bool audio_callback(uint8_t* raw_buffer, size_t n_bytes, struct sampleArgs* Args
         uint32_t packed_data = 0;
         for (int j = 0; j<3; j++)
             packed_data |= (uint32_t)raw_buffer[i+j]<<(8*j+8);// Added a byte here to easily perform sign extension later
-        int32_t res = static_cast<int32_t>(packed_data);
+        int32_t res = (int32_t)(packed_data);
         // Perform Sign Extension (Crucial for negative sound wave numbers)
-        streameddata.buffers[streameddata.buf_select][streameddata.buf_count] = static_cast<float>(res>>8);
+        streameddata.buffers[streameddata.buf_select][streameddata.buf_count] = (float)(res>>8);
         streameddata.buf_count++;
         if(streameddata.buf_count >= streameddata.n_samples) {
             streameddata.buf_select ^= 1;
@@ -59,7 +61,7 @@ bool microphone_start(uint32_t n_samples, FILE* f)
     }
     //streameddata.swapped_buffers_count = 0;
     ESP_LOGI(TAG, "Recording is Starting");
-    static struct sampleArgs myArgs = {
+    struct sampleArgs myArgs = {
         .loop_callback = audio_callback,
         .rec_file = f
          };
@@ -134,7 +136,11 @@ void app_main(){
     // Here I am opening the file and creating the name:
     mount_sdcard();
     const char *mount_point = SD_MOUNT_POINT;
-    FILE* rec_file = init_wavfile(REC_TIME, wavfilename);
+    const WAVstruct newwav = {.rec_time=REC_TIME, 
+                        .sample_rate=INIT_AUDIO_SAMPLE_RATE,
+                        .bit_width=INIT_AUDIO_BIT_WIDTH,
+                        .num_channels = 1};
+    FILE* rec_file = init_wavfile(newwav, wavfilename);
     // summary of inferencing settings (from model_metadata.h)
     printf("Transform settings:\n");
     printf("\tInterval: ");
@@ -148,7 +154,7 @@ void app_main(){
     const char* const class_labels[] = CLASSIFIER_LABELS;
     uint32_t curr_samples =0;
     // Now I can initalize the classifier
-    if (run_classifier_init() == false) {
+    if (transform_and_classify_init(model_espdl) == false) {
         ESP_LOGE(TAG, "Issue Initializing Model");
         return;
     }
@@ -164,7 +170,7 @@ void app_main(){
         uint32_t total_events = atomic_exchange(&streameddata.swapped_buffers_count, 0);
         if (total_events > 1)
             ESP_LOGE(TAG, "Data missed! Buffer was swapped %d times before reading!", total_events);
-        run_classifier_continuous(streameddata.buffers[streameddata.buf_select^1], classification_results[curr_classifications]);
+        transform_and_classify(streameddata.buffers[streameddata.buf_select^1], classification_results[curr_classifications]);
         curr_samples += WINDOWSTRIDE;
         if (curr_samples<WINDOWSAMPLES) continue;
         curr_classifications++;

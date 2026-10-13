@@ -1,3 +1,10 @@
+#include <stdatomic.h> // This is used for the volatile variable
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
+#include "nvs_flash.h"
+
+#define ENABLE_MIC_PIN      GPIO_NUM_14
 
 // Common Configuration:
 #define COMMONCONFIG
@@ -15,7 +22,7 @@
 #define MODELCONFIG
 #define CLASSIFIER_LABEL_COUNT 2
 #define CLASSIFIER_LABELS      {"Faucet is Off", "Faucet is On"}
-#define MODELFILENAME           CONFIG_MODELFILENAME
+#define MODELFILENAME           CONFIG_MODEL_FILENAME
 
 #include "ESP-DL.h"
 #include "I2S_pcm.h"
