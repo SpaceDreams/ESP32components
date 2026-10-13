@@ -4,6 +4,11 @@ static const char *TAG = "ESP-DL Testing";
 // The symbol name is composed of three parts: prefix "_binary_", filename "signaldect_espdl", and suffix "_start"
 extern const uint8_t model_espdl[] asm("_binary_"MODELFILENAME"_espdl_start"); //
 
+void SampleAudioTask(void *ArgPointer){
+        sample_audio(ArgPointer);
+        vTaskDelete(NULL);
+}
+
 bool audio_callback(uint8_t* raw_buffer, size_t n_bytes, struct sampleArgs* Args)
 {  // There is a catch here; i2s is 24 bit; so 
     bool keep_reading_i2s = true;
@@ -45,7 +50,7 @@ bool audio_callback(uint8_t* raw_buffer, size_t n_bytes, struct sampleArgs* Args
     return keep_reading_i2s;
 }
 
-bool microphone_start(uint32_t n_samples, FILE* f)
+bool microphone_start(uint32_t n_samples, struct sampleArgs * myArgs)
 {   
     memset(streameddata.buffers, 0, sizeof(streameddata.buffers));
     streameddata.rec_samples = 0;
@@ -61,15 +66,11 @@ bool microphone_start(uint32_t n_samples, FILE* f)
     }
     //streameddata.swapped_buffers_count = 0;
     ESP_LOGI(TAG, "Recording is Starting");
-    struct sampleArgs myArgs = {
-        .loop_callback = audio_callback,
-        .rec_file = f
-         };
     xTaskCreatePinnedToCore(
         SampleAudioTask,            // Task function
         "Sample_I2S_data",       // Task name
         10000,                 // Max Dyanmic Bytes required for task, static bytes are pre-allocated
-        &myArgs,              // Pointer to your struct of arguments
+        myArgs,              // Pointer to your struct of arguments
         1,                    // Task priority
         NULL,                 // Task handle
         1                    // Pin to Core 1 (APP_CPU)
@@ -158,8 +159,11 @@ void app_main(){
         ESP_LOGE(TAG, "Issue Initializing Model");
         return;
     }
+    static struct sampleArgs myArgs;
+        myArgs.loop_callback = audio_callback;
+        myArgs.rec_file = rec_file;
     // Now I can start the microphone and start recording
-    if (microphone_start(WINDOWSTRIDE,rec_file) == false) {
+    if (microphone_start(WINDOWSTRIDE,&myArgs) == false) {
         ESP_LOGE(TAG, "Issue starting microphone");
         return;
     }

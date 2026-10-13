@@ -37,7 +37,7 @@ void shift_and_scale(const float *input, uint16_t *input_shape, T1 * output, T2 
     // 2. Quantize new incoming floats directly into the right end of the tensor
     for (size_t i = 0; i < shiftpoint; i++){
         float res = NORMALIZE_AND_CLIP(input[i]);
-        if constexpr (std::is_invocable_v<Op>)
+        if constexpr (std::is_invocable_v<Op,decltype(res)>)
             write_ptr[i] = static_cast<T1>(f(res));
         else
             write_ptr[i] = static_cast<T1>(res);

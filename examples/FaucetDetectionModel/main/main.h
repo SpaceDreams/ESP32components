@@ -25,7 +25,7 @@
 #define MODELFILENAME           CONFIG_MODEL_FILENAME
 
 #include "ESP-DL.h"
-#include "I2S_pcm.h"
+#include "I2Sloop.h"
 #include "SDcard.h"
 
 // Saving data:
@@ -49,8 +49,3 @@ typedef struct { // To save space this buffer takes bytes; this way the 3 byte m
 } record_struct;
 record_struct streameddata;
 SemaphoreHandle_t ShutDownI2S;// Used to tell the main app that I2S is shutting down.
-
-void SampleAudioTask(void *ArgPointer){
-        sample_audio(ArgPointer);
-        vTaskDelete(NULL);
-}
