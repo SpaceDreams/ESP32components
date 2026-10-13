@@ -10,7 +10,7 @@ bool transform_and_classify_init(const uint8_t * model_espdl){
 	return flag;
 }
 
-void transform_and_classify(const float * input, float *output)
+void transform_and_classify(float * input, float *output)
 {
 	TransformResult transformout;
 	if(!(init_count>0)){
