@@ -1,7 +1,8 @@
 #include "transform.hpp"
 #include "model.hpp"
+#include "classification-pipeline.h"
 
-
+static size_t init_count=0;
 bool transform_and_classify_init(const uint8_t * model_espdl){
 	bool flag=false;
 	if(init_transform() && run_classifier_init(model_espdl))
@@ -13,9 +14,9 @@ void transform_and_classify(const float * input, float *output)
 {
 	TransformResult transformout;
 	if(!(init_count>0)){
-		transformout = transform(input, true);
+		transformout = initialtransform(input);
 	} else
-		transformout = transform(input);
+		transformout = slicetransform(input);
 	ModelInput modelinput = getModelInput();
 	shift_and_scale(transformout.output,transformout.shape,
 		            modelinput.input,modelinput.shape,quantize);

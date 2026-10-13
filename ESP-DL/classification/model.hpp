@@ -7,3 +7,4 @@ typedef struct {
 } ModelInput;
 
 ModelInput getModelInput();
+int8_t quantize(float a);
