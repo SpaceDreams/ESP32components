@@ -18,17 +18,25 @@
 
 template <typename T1, typename T2, typename Op=int>
 void shift_and_scale(const float *input, uint16_t *input_shape, T1 * output, T2 * output_shape, Op f=0) {
-    /** Example Shifting:
-     * x={{1,2,3},{4,5,6},{7,8,9}}
-     * input = {8,9,10} \\ only considering the case where rows are different but columns are always the same
-     * newx = {{4,5,6},{7,8,9},{8,9,10}}
-     * inputshape = {1,3}
-     * xshape = {3,3}
-     * Since the columns of the input are equal to the columns of x and c is column major then I have:
-     * newx = memmove(x,&x[flatten(inputshape)],(flatten(xshape)-flatten(inputshape))*size(x[0]))
-     * flatten(xshape)=xshape[0]*xshape[1]
-     * flatten(inputshape) = inputshape[0]*inputshape[1]
-     * **/
+    /**
+    * \brief This function will scale the input shift it into the last elements of the output, if a function is provided it get performed too.
+    *
+    * \details Example Shifting:
+    *    x={{1,2,3},{4,5,6},{7,8,9}}
+    *    input = {8,9,10} \\ only considering the case where rows are different but columns are always the same
+    *    newx = {{4,5,6},{7,8,9},{8,9,10}}
+    *    inputshape = {1,3}
+    *    xshape = {3,3}
+    *    Since the columns of the input are equal to the columns of x and c is column major then I have:
+    *    newx = memmove(x,&x[flatten(inputshape)],(flatten(xshape)-flatten(inputshape))*size(x[0]))
+    *    flatten(xshape)=xshape[0]*xshape[1]
+    *    flatten(inputshape) = inputshape[0]*inputshape[1]
+    *
+    * \param input This is the raw floats that either get quantized or saved
+    * \param input_shape input is a 2D array, this param tells it the exact size of those dimensions
+    * \param output This is the much larger array, where the number of columns are equal to the input's number of columns else this silently will fail
+    * \param input_shape output is a 2D array, this param tells it the exact size of those dimensions
+    */
     // 1. Shift old quantized tensor data left
     size_t shiftpoint = input_shape[0]*input_shape[1];
     size_t shiftsize = output_shape[0]*output_shape[1] - shiftpoint;

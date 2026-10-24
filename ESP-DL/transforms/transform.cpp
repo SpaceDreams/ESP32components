@@ -16,10 +16,30 @@ static float overlapbuff[sizeofoverlapbuff];
 static TransformResult transoutput = {.output = transformoutput, .shape = {STRIDESHAPE_X,STRIDESHAPE_Y}};
 
 void initial_transform(float * input, float * output){
+    /**
+    * \brief For streaming data this is the very first window
+    *
+    * \details For streaming data the first window is the smallest, only containing that size of the window.
+    *          So, this function performs the transform on this window and places the overlap between this
+    *          window and the next one in the overlap buffer.
+    *
+    * \param input Raw data to be transformed
+    * \param output This is where the resulting transform will be saved
+    */
     memcpy(overlapbuff,&input[WINDOWSTRIDE-OVERLAP],OVERLAP*sizeof(input[0]));
     transform->process(input, WINDOWSTRIDE, output);
 }
 void slice_transform(float * input, float * output){
+    /**
+    * \brief For streaming data this transforms the input data and any overlap from the previous window.
+    *
+    * \details For streaming data the there is overlap from the previous window, that overlap is combined 
+    *          with the input data and the transfrom is processed. This the input's overlap is saved
+    *          to the overlap buffer.
+    *
+    * \param input Raw data to be transformed
+    * \param output This is where the resulting transform will be saved
+    */
 	memcpy(&overlapbuff[OVERLAP],input,WINDOWSTRIDE*sizeof(input[0]));
     transform->process(overlapbuff, WINDOWSTRIDE+OVERLAP, output);
     memmove(overlapbuff,&overlapbuff[WINDOWSTRIDE],OVERLAP*sizeof(overlapbuff[0]));
