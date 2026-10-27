@@ -27,7 +27,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+/**
+ * @defgroup transform
+ * @ingroup ESP-DL
+ * @brief transforms 1D data into 2D data
+ * @detail These functions transform audio data into a fbank spectrogram.
+ * @{
+ */
 typedef struct {
     float * output;
     uint16_t shape[2];
@@ -37,7 +43,7 @@ bool init_transform();
 TransformResult initialtransform(float *input);
 TransformResult slicetransform(float *input);
 void shift_and_normalize(const float *input, uint16_t *input_shape, float * output, uint16_t * output_shape);
-
+/** @} */ // This closes the group
 #ifdef __cplusplus
 }
 #endif

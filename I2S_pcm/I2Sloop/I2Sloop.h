@@ -13,7 +13,14 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+/**
+ * @defgroup I2S_pcm
+ * @brief Reads data from the I2S input and saves to memory
+ * @detail This function is used within the reading loop of the I2S function; it can be 
+ *         redefined but this is the basic structure and it must take less than the pooling
+ *         time to complete whose default is 100ms.
+ * @{
+ */
 #ifndef I2Sloop_STRUCT
 #define I2Sloop_STRUCT
 
@@ -28,6 +35,7 @@ extern uint8_t i2s_readraw_buff[];
 extern size_t bytes_read;
 void sample_audio(void *ArgPointer);
 
+/** @} */ // This closes the SDcard group
 #ifdef __cplusplus
 }
 #endif

@@ -290,7 +290,7 @@ TAB_SIZE               = 4
 # with the commands \{ and \} for these it is advised to use the version @{ and
 # @} or use a double escape (\\{ and \\})
 
-ALIASES                =
+ALIASES                = 
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
@@ -298,7 +298,7 @@ ALIASES                =
 # members will be omitted, etc.
 # The default value is: NO.
 
-OPTIMIZE_OUTPUT_FOR_C  = NO
+OPTIMIZE_OUTPUT_FOR_C  = YES
 
 # Set the OPTIMIZE_OUTPUT_JAVA tag to YES if your project consists of Java or
 # Python sources only. Doxygen will then generate output that is more tailored
@@ -874,7 +874,7 @@ FILE_VERSION_FILTER    =
 # DoxygenLayout.xml, Doxygen will parse it automatically even if the LAYOUT_FILE
 # tag is left empty.
 
-LAYOUT_FILE            =
+LAYOUT_FILE            = DoxygenLayout.xml
 
 # The CITE_BIB_FILES tag can be used to specify one or more bib files containing
 # the reference definitions. This must be a list of .bib files. The .bib
@@ -1250,7 +1250,7 @@ FILTER_SOURCE_PATTERNS =
 # (index.html). This can be useful if you have a project on for instance GitHub
 # and want to reuse the introduction page also for the Doxygen output.
 
-USE_MDFILE_AS_MAINPAGE =
+USE_MDFILE_AS_MAINPAGE = README.md
 
 # If the IMPLICIT_DIR_DOCS tag is set to YES, any README.md file found in sub-
 # directories of the project's root, is used as the documentation for that sub-

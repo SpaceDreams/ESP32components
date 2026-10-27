@@ -9,11 +9,16 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+/**
+ * @defgroup model
+ * @ingroup ESP-DL
+ * @brief initializes a custom esp-dl model and runs it
+ * @{
+ */
 void quantize_and_run_classifier(const float * input, float *output);
 void run_classifier(float *output);
 bool run_classifier_init(const uint8_t * model_espdl);
-
+/** @} */ // This closes the group
 #ifdef __cplusplus
 }
 #endif
