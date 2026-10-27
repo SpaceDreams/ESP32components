@@ -16,7 +16,7 @@ The output data word length is 24 bits per channel. This is inside a 32 bit Slot
 The default data format is I²S (twos complement), MSB‐first. In this format, the MSB of each word is delayed by one SCK cycle from
 the start of each half‐frame. Lastly, Word select is a 50% duty cycle. This is the standard Philips Format
 
-## [How to Portion the DMA Buffer to Prevent Data Loss](https://docs.espressif.com/projects/esp-idf/en/v6.0.1/esp32s3/api-reference/peripherals/i2s.html#how-to-prevent-data-lost)
+## [How to Partition the DMA Buffer to Prevent Data Loss](https://docs.espressif.com/projects/esp-idf/en/v6.0.1/esp32s3/api-reference/peripherals/i2s.html#how-to-prevent-data-lost)
 
 1) Gather the data: `sample_rate`, `data_bit_width`, `slot_num` and `polling_cycle`.
    The polling cycle is how much time required to process the data after it is read. Two examples are: streaming data to a PC, saving data to a SD card. `slot_num` is the number of slots for one data collection cycle.

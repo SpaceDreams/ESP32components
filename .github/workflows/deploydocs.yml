@@ -25,11 +25,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Install Doxygen
+      - name: Download and Install Doxygen 1.18.0
+        run: |
+          # 1. Download the official prebuilt Linux binary tarball
+          curl -sSLo doxygen.tar.gz https://github.com/doxygen/doxygen/releases/download/Release_1_18_0/doxygen-1.18.0.src.tar.gz
+          
+          # 2. Extract and place the binary into a system path folder
+          mkdir doxygen-temp
+          tar xf doxygen.tar.gz --strip-components=1 -C doxygen-temp
+          sudo mv doxygen-temp/bin/doxygen /usr/local/bin/
+          
+          # 4. Clean up temporary files
+          rm -rf doxygen.tar.gz doxygen-temp
+      - name: Install graphviz
         run: |
           sudo apt-get update
-          sudo apt-get install -y doxygen graphviz
+          sudo apt-get install -y graphviz
 
       - name: Run Doxygen
         run: doxygen Doxyfile # Adjust path if your Doxyfile is in a subfolder

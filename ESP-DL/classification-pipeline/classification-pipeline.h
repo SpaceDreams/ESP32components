@@ -4,8 +4,10 @@ extern "C" {
 #endif
 /**
  * @defgroup ESP-DL
+ * 
  * @brief for a given model this will transfrom 1D data and pass it through the model
- * @detail This function will initialize a esp-dl model that was generated with [esp-ppq](https://docs.espressif.com/projects/esp-dl/en/latest/tutorials/how_to_quantize_model.html)
+ * 
+ * @details This function will initialize a esp-dl model that was generated with [esp-ppq](https://docs.espressif.com/projects/esp-dl/en/latest/tutorials/how_to_quantize_model.html)
  *         after initialized then the data is transformed into type of 2D fourier transform over a fixed sampling window.
  * @{
  */

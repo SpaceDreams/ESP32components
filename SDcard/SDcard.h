@@ -19,8 +19,10 @@ extern "C" {
 #endif
 /**
  * @defgroup SDcard
+ * 
  * @brief Saves data to an SD card with some common file standards provided
- * @detail These functions provide the common api for mounting and unmounting an SD card
+ * 
+ * @details These functions provide the common api for mounting and unmounting an SD card
  *         using the MMC interface or the SPI interface. Lastly this will initialize a file
  *         and can automate initializing a WAV file.
  * @{

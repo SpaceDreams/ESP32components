@@ -11,8 +11,11 @@ extern "C" {
 #endif
 /**
  * @defgroup model
+ * 
  * @ingroup ESP-DL
+ * 
  * @brief initializes a custom esp-dl model and runs it
+ * 
  * @{
  */
 void quantize_and_run_classifier(const float * input, float *output);

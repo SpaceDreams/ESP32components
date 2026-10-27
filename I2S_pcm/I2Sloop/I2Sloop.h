@@ -15,10 +15,14 @@ extern "C" {
 #endif
 /**
  * @defgroup I2S_pcm
+ * 
  * @brief Reads data from the I2S input and saves to memory
- * @detail This function is used within the reading loop of the I2S function; it can be 
+ * 
+ * @details This function is used within the reading loop of the I2S function; it can be 
  *         redefined but this is the basic structure and it must take less than the pooling
  *         time to complete whose default is 100ms.
+ * 
+ *         @includedoc ./I2S_pcm/README.md
  * @{
  */
 #ifndef I2Sloop_STRUCT

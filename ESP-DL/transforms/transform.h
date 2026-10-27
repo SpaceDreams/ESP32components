@@ -29,9 +29,13 @@ extern "C" {
 #endif
 /**
  * @defgroup transform
+ * 
  * @ingroup ESP-DL
+ * 
  * @brief transforms 1D data into 2D data
+ * 
  * @detail These functions transform audio data into a fbank spectrogram.
+ * 
  * @{
  */
 typedef struct {
