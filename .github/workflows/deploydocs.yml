@@ -33,7 +33,7 @@ jobs:
           # 2. Extract and place the binary into a system path folder
           mkdir doxygen-temp
           tar xf doxygen.tar.gz --strip-components=1 -C doxygen-temp
-          sudo mv doxygen-temp/doxygen/bin /usr/local/bin/
+          sudo mv doxygen-temp/bin /usr/local/bin/
           
           # 4. Clean up temporary files
           rm -rf doxygen.tar.gz doxygen-temp
