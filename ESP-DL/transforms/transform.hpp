@@ -49,12 +49,9 @@ void shift_and_scale(const float *input, uint16_t *input_shape, T1 * output, T2 
         ESP_LOGE(TAG, "Input shape exceeds overall output buffer capacity!");
         return; 
     }
-
+    // 1. Shift old quantized tensor data left
     size_t shiftpoint = input_total;
     size_t shiftsize = output_total - shiftpoint;
-    // 1. Shift old quantized tensor data left
-    size_t shiftpoint = input_shape[0]*input_shape[1];
-    size_t shiftsize = output_shape[0]*output_shape[1] - shiftpoint;
     memmove(output, &output[shiftpoint], shiftsize* sizeof(output[0]));
     T1 *write_ptr = &output[shiftsize];
     // 2. Quantize new incoming floats directly into the right end of the tensor
