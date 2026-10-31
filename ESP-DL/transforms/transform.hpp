@@ -36,14 +36,14 @@ void shift_and_scale(const float *input, uint16_t *input_shape, T1 * output, T2 
     * \param input This is the raw floats that either get quantized or saved
     * \param input_shape input is a 2D array, this param tells it the exact size of those dimensions
     * \param output This is the much larger array, where the number of columns are equal to the input's number of columns else this silently will fail
-    * \param input_shape output is a 2D array, this param tells it the exact size of those dimensions
+    * \param output_shape is a 2D array, this param tells it the exact size of those dimensions
     */
     const char *Local_TAG = "Transform Tests";
     if (!input || !input_shape || !output || !output_shape) {
         ESP_LOGE(Local_TAG, "Null Pointer Detected");
         return;}
-    size_t input_total = (size_t)input_shape[0] * input_shape[1];
-    size_t output_total = (size_t)output_shape[0] * output_shape[1];
+    size_t input_total = (size_t)(input_shape[0] * input_shape[1]);
+    size_t output_total = (size_t)(output_shape[0] * output_shape[1]);
 
     // CRITICAL: Prevent underflow of unsigned size_t variables
     if (input_total > output_total) {
@@ -54,6 +54,10 @@ void shift_and_scale(const float *input, uint16_t *input_shape, T1 * output, T2 
     // 1. Shift old quantized tensor data left
     size_t shiftpoint = input_total;
     size_t shiftsize = output_total - shiftpoint;
+    if (!(shiftsize > 0 && shiftpoint > 0)) {
+        ESP_LOGE(Local_TAG, "Shifting and ");
+        return; 
+    }
     memmove(output, &output[shiftpoint], shiftsize* sizeof(output[0]));
     T1 *write_ptr = &output[shiftsize];
     // 2. Quantize new incoming floats directly into the right end of the tensor
