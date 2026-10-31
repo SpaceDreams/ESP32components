@@ -37,6 +37,21 @@ void shift_and_scale(const float *input, uint16_t *input_shape, T1 * output, T2 
     * \param output This is the much larger array, where the number of columns are equal to the input's number of columns else this silently will fail
     * \param input_shape output is a 2D array, this param tells it the exact size of those dimensions
     */
+    if (!input || !input_shape || !output || !output_shape) {
+        ESP_LOGE(TAG, "Null Pointer Detected");
+        return;}
+    size_t input_total = (size_t)input_shape[0] * input_shape[1];
+    size_t output_total = (size_t)output_shape[0] * output_shape[1];
+
+    // CRITICAL: Prevent underflow of unsigned size_t variables
+    if (input_total > output_total) {
+        // Input cannot be larger than the total history buffer size!
+        ESP_LOGE(TAG, "Input shape exceeds overall output buffer capacity!");
+        return; 
+    }
+
+    size_t shiftpoint = input_total;
+    size_t shiftsize = output_total - shiftpoint;
     // 1. Shift old quantized tensor data left
     size_t shiftpoint = input_shape[0]*input_shape[1];
     size_t shiftsize = output_shape[0]*output_shape[1] - shiftpoint;
