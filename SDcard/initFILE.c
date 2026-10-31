@@ -1,14 +1,11 @@
 #include "SDcard.h"
-
-static const char *sd_TAG = "INIT_FILE";
-const int WAVE_HEADER_SIZE = 44;
-
-//mount_sdcard();
+#define WAVE_HEADER_SIZE 44
+static const char *TAG = "INIT_FILE";
 
 FILE* init_file(const char *filename)
 {
     // Use POSIX and C standard library functions to work with files.
-    ESP_LOGI(sd_TAG, "Opening file");
+    ESP_LOGI(TAG, "Opening file");
     size_t namesize = (strlen(SD_MOUNT_POINT)+1+strlen(filename)+1);
     char *filepath = (char *)malloc(namesize*sizeof(char));
     if (filepath == NULL) return NULL;
@@ -18,13 +15,13 @@ FILE* init_file(const char *filename)
     if (stat(filepath, &st) == 0) {
         // Delete it if it exists
         unlink(filepath);
-        ESP_LOGE(sd_TAG, "%s already exists now deleting",filepath);
+        ESP_LOGE(TAG, "%s already exists now deleting",filepath);
     }
 
     // Create new WAV file
     FILE *f = fopen(filepath, "wb");
     if (f == NULL) {
-        ESP_LOGE(sd_TAG, "Failed to open file for writing");
+        ESP_LOGE(TAG, "Failed to open file for writing");
         return NULL;
     }
     return f;
@@ -52,7 +49,7 @@ FILE* init_wavfile(const WAVstruct Args, const char *filename)
     const wav_header_t wav_header =
         WAV_HEADER_PCM_DEFAULT(byte_rate * Args.rec_time, Args.bit_width, Args.sample_rate, Args.num_channels);
     // Write the header to the WAV file
-    fwrite(&wav_header, sizeof(wav_header), 1, f);
+    fwrite(&wav_header, WAVE_HEADER_SIZE, 1, f);
     return f;
 }
 
