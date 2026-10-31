@@ -20,14 +20,14 @@ void transform_and_classify(float * input, float *output,bool firsttransform, bo
     * \param continuemodel this is true once the input data to the model is full
     */
 	TransformResult *transformout;
-	ModelInput *modelinput;
+	ModelInput modelinput;
 	if(firsttransform){
 		transformout = initialtransform(input);
 	} else
 		transformout= slicetransform(input);
-	getModelInput(modelinput);
+	getModelInput(&modelinput);
 	shift_and_scale(transformout->output,transformout->shape,
-		            modelinput->input,modelinput->shape,quantize);
+		            modelinput.input,modelinput.shape,quantize);
 	if(continuemodel)
     	run_classifier(output);
 }
