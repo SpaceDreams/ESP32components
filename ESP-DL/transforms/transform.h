@@ -44,8 +44,8 @@ typedef struct {
 } TransformResult;
 
 bool init_transform();
-TransformResult initialtransform(float *input);
-TransformResult slicetransform(float *input);
+TransformResult * initialtransform(float *input);
+TransformResult * slicetransform(float *input);
 void shift_and_normalize(const float *input, uint16_t *input_shape, float * output, uint16_t * output_shape);
 /** @} */ // This closes the group
 #ifdef __cplusplus

@@ -6,5 +6,5 @@ typedef struct {
     int* shape;
 } ModelInput;
 
-ModelInput getModelInput();
+void getModelInput(ModelInput *res);
 int8_t quantize(float a);

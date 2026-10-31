@@ -66,18 +66,18 @@ bool init_transform(){
     return true;
 }
 
-TransformResult initialtransform(float *input){
+TransformResult * initialtransform(float *input){
     transoutput.shape[0] = INITSTRIDESHAPE_X;
     transoutput.shape[1] = INITSTRIDESHAPE_Y;
     initial_transform(input, transoutput.output);
-    return transoutput;
+    return &transoutput;
 }
 
-TransformResult slicetransform(float *input){
+TransformResult * slicetransform(float *input){
     transoutput.shape[0] = STRIDESHAPE_X;
     transoutput.shape[1] = STRIDESHAPE_Y;
     slice_transform(input, transoutput.output);
-    return transoutput;
+    return &transoutput;
 }
 
 void shift_and_normalize(const float *input, uint16_t *input_shape, float * output, uint16_t * output_shape){
