@@ -49,7 +49,7 @@ void shift_and_scale(const float *input, uint16_t *input_shape, T1 * output, T2 
     if (input_total > output_total) {
         // Input cannot be larger than the total history buffer size!
         ESP_LOGE(Local_TAG, "Input shape exceeds overall output buffer capacity: \
-            Input: {%ld,%ld} Output:{%ld,%ld}" input_shape[0] , input_shape[1],output_shape[0] , output_shape[1]);
+            Input: {%ld,%ld} Output:{%ld,%ld}", input_shape[0] , input_shape[1],output_shape[0] , output_shape[1]);
         return; 
     }
     // 1. Shift old quantized tensor data left
