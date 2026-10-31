@@ -83,7 +83,9 @@ void dequantize_model_output(float * probabilities) {
     float scale = DL_SCALE(model_output->exponent);
     // Cast the raw array pointer (Use int8_t* since the model is quantized to 8-bits)
     int8_t* raw_output_ptr = (int8_t*)model_output->get_element_ptr();
+    #ifndef MODELTRBLSHT
     printf("Logits Results: Faucet off: %d Faucet on: %d\n",raw_output_ptr[0],raw_output_ptr[1]);
+    #endif
     // Allocate arrays for calculation
     float dequantized_logits[total_elements];
 

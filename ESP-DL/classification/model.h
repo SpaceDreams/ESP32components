@@ -5,7 +5,9 @@
 #define MODELINPUTSHAPE_X       (25*3+24) //3*strideslice+initstrideslice
 #define MODELINPUTSHAPE_Y        (40)//num_of_mel_banks
 #endif
-
+#ifndef MODELTRBLSHT
+#define MODELTRBLSHT false
+#endif
 #ifdef __cplusplus
 extern "C" {
 #endif

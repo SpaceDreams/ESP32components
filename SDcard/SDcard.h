@@ -38,6 +38,7 @@ typedef struct {
     uint32_t num_channels;
 } WAVstruct;
 FILE* init_wavfile(const WAVstruct Args, const char *filename);
+bool rename_sdcard_file(const char *old_filename,const char *new_filename)
 
 
 /** @} */ // This closes the SDcard group
