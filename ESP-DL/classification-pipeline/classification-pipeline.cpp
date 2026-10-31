@@ -2,7 +2,6 @@
 #include "model.hpp"
 #include "classification-pipeline.h"
 
-static size_t init_count=0;
 bool transform_and_classify_init(const uint8_t * model_espdl){
 	bool flag=false;
 	if(init_transform() && run_classifier_init(model_espdl))
