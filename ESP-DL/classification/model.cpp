@@ -150,6 +150,7 @@ void getModelInput(ModelInput *res){
     int8_t *tensor_ptr = (int8_t *)model_input->get_element_ptr();
     int shapepnt[2]={shape[1],shape[2]};
     res->input=tensor_ptr;
-    res->shape=shapepnt;
+    res->shape[0]=shape[0];
+    res->shape[1]=shape[1];
 }
 

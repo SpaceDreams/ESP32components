@@ -3,7 +3,7 @@
 
 typedef struct {
     int8_t * input;
-    int* shape;
+    int shape[2];
 } ModelInput;
 
 void getModelInput(ModelInput *res);
