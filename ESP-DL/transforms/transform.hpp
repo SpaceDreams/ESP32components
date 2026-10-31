@@ -22,6 +22,7 @@ void shift_and_scale(const float *input, uint16_t *input_shape, T1 * output, T2 
     * \brief This function will scale the input shift it into the last elements of the output, if a function is provided it get performed too.
     *
     * \details Example Shifting:
+    * ```
     *    x={{1,2,3},{4,5,6},{7,8,9}}
     *    input = {8,9,10} \\ only considering the case where rows are different but columns are always the same
     *    newx = {{4,5,6},{7,8,9},{8,9,10}}
@@ -31,14 +32,15 @@ void shift_and_scale(const float *input, uint16_t *input_shape, T1 * output, T2 
     *    newx = memmove(x,&x[flatten(inputshape)],(flatten(xshape)-flatten(inputshape))*size(x[0]))
     *    flatten(xshape)=xshape[0]*xshape[1]
     *    flatten(inputshape) = inputshape[0]*inputshape[1]
-    *
+    *```
     * \param input This is the raw floats that either get quantized or saved
     * \param input_shape input is a 2D array, this param tells it the exact size of those dimensions
     * \param output This is the much larger array, where the number of columns are equal to the input's number of columns else this silently will fail
     * \param input_shape output is a 2D array, this param tells it the exact size of those dimensions
     */
+    const char *Local_TAG = "Transform Tests";
     if (!input || !input_shape || !output || !output_shape) {
-        ESP_LOGE(TAG, "Null Pointer Detected");
+        ESP_LOGE(Local_TAG, "Null Pointer Detected");
         return;}
     size_t input_total = (size_t)input_shape[0] * input_shape[1];
     size_t output_total = (size_t)output_shape[0] * output_shape[1];
@@ -46,7 +48,7 @@ void shift_and_scale(const float *input, uint16_t *input_shape, T1 * output, T2 
     // CRITICAL: Prevent underflow of unsigned size_t variables
     if (input_total > output_total) {
         // Input cannot be larger than the total history buffer size!
-        ESP_LOGE(TAG, "Input shape exceeds overall output buffer capacity!");
+        ESP_LOGE(Local_TAG, "Input shape exceeds overall output buffer capacity!");
         return; 
     }
     // 1. Shift old quantized tensor data left
