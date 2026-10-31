@@ -11,7 +11,7 @@ extern "C" {
  *         after initialized then the data is transformed into type of 2D fourier transform over a fixed sampling window.
  * @{
  */
-void transform_and_classify(float * input, float *output);
+void transform_and_classify(float * input, float *output,bool firsttransform, bool continuemodel);
 bool transform_and_classify_init(const uint8_t * model_espdl);
 
 /** @} */ // This closes the SDcard group

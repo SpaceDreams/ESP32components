@@ -10,19 +10,24 @@ bool transform_and_classify_init(const uint8_t * model_espdl){
 	return flag;
 }
 
-void transform_and_classify(float * input, float *output)
+void transform_and_classify(float * input, float *output,bool firsttransform, bool continuemodel)
 {
+	 /**
+    * \brief This function transforms the input data and if passes the output classifications if continuemodel is true
+    *
+    * \param input This is the raw i2s data
+    * \param output this is the classified data
+    * \param firsttransform this is true when the very first transform is performed on data
+    * \param continuemodel this is true once the input data to the model is full
+    */
 	TransformResult transformout;
-	if(!(init_count>0)){
+	if(firsttransform){
 		transformout = initialtransform(input);
 	} else
 		transformout = slicetransform(input);
 	ModelInput modelinput = getModelInput();
 	shift_and_scale(transformout.output,transformout.shape,
 		            modelinput.input,modelinput.shape,quantize);
-	if (init_count<WINDOWSAMPLES){
-        init_count += WINDOWSTRIDE;
-        return;
-    }
-    run_classifier(output);
+	if(continuemodel)
+    	run_classifier(output);
 }
