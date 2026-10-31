@@ -39,7 +39,8 @@ FILE* init_wavfile(const WAVstruct Args, const char *filename)
     uint32_t total_file_size = Args.rec_time*Args.sample_rate*(Args.bit_width/8)+WAVE_HEADER_SIZE;
 
     // preallocation
-    esp_err_t ret = esp_vfs_fat_create_contiguous_file(
+    //esp_err_t ret = esp_vfs_fat_create_contiguous_file(
+    esp_vfs_fat_create_contiguous_file(
         SD_MOUNT_POINT,               // base_path (where your partition/SD card is mounted)
         filepath, // full_path to the file
         total_file_size,        // size in bytes (e.g., 10 MB)
