@@ -28,7 +28,8 @@ char * formatted_filename(const char *format, va_list args){
     char *filename = (char *)malloc(length + 1);
     if (filename == NULL) {
         va_end(args);
-        return;
+        ESP_LOGE(TAG, "Error Allocating Memory");
+        return NULL;
     }
 
     // 4. Perform the actual concatenation into the heap buffer

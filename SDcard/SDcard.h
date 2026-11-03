@@ -30,14 +30,14 @@ extern "C" {
 
 void mount_sdcard(void);
 void unmount_sdcard(void);
-FILE* init_file(const char *filename);
+FILE* init_file(const char *filename,...);
 typedef struct {
     uint32_t rec_time;
     uint32_t sample_rate;
     uint32_t bit_width;
     uint32_t num_channels;
 } WAVstruct;
-FILE* init_wavfile(const WAVstruct Args, const char *filename);
+FILE* init_wavfile(const WAVstruct Args, const char *filename,...);
 bool rename_sdcard_file(const char *old_filename,const char *new_filename);
 
 
