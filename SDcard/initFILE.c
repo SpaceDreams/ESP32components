@@ -22,6 +22,7 @@ char * formatted_filename(const char *format, va_list args){
     if (length < 0) {
         va_end(args);
         ESP_LOGE(TAG, "Error Creating Filename");
+        return NULL;
     }
 
     // 3. Allocate heap memory for the dynamic filename
@@ -81,7 +82,6 @@ FILE* init_file(const char *format,...)
     va_start(args, format); // Capture the "..." into the args variable
     // Pass the format and the packed args list to the worker function
     char * filepath = formatted_filename(format, args);
-    va_end(args); // Clean up the args bundle
     FILE* f = openANDreturn(filepath);
     //Free all malloc's before closing this function
     free(filepath);
@@ -103,7 +103,6 @@ FILE* init_wavfile(const WAVstruct Args, const char *format,...)
     va_start(args, format); // Capture the "..." into the args variable
     // Pass the format and the packed args list to the worker function
     char * filepath = formatted_filename(format, args);
-    va_end(args); // Clean up the args bundle
 
     // 1. Pre-allocate the entire estimated size (e.g., 10 MB total)
     uint32_t byte_rate=  Args.sample_rate * (Args.bit_width/8) * Args.num_channels;
