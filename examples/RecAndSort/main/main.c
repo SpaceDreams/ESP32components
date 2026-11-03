@@ -67,7 +67,7 @@ bool microphone_start(uint32_t n_samples, struct sampleArgs * myArgs)
     streameddata.buf_select = 0;
     streameddata.buf_count = 0;
     streameddata.n_samples = n_samples;
-    atomic_store(&streameddata.CompletedSaving, true);
+    atomic_store(&streameddata.CompletedSaving, false);
     file_closed = xSemaphoreCreateBinary();
     streameddata.buf_ready = xSemaphoreCreateBinary();
     if (streameddata.buf_ready == NULL || file_closed == NULL ) {
@@ -150,9 +150,6 @@ void app_main(){
     for (size_t ix = 0; ix < CLASSIFIER_LABEL_COUNT; ix++)
         ptr+=snprintf(ptr,required_size[ix+1],", %s", class_labels[ix]);
     while (true){
-        int length = snprintf(NULL, 0, "continuous_record_%ld_%ld_espdl.wav",boot_counter, iter_val);
-        char *wavfilename = (char *)malloc((length + 1)* sizeof(char));
-        snprintf(wavfilename, length + 1, "continuous_record_%ld_%ld_espdl.wav",boot_counter, iter_val);
         FILE* rec_file = init_wavfile(newwav, dummyWAVfile);
         theArgs.rec_file = rec_file;
         atomic_store(&streameddata.CompletedSaving, false);
@@ -180,14 +177,15 @@ void app_main(){
         ESP_LOGI(TAG, "Completed Modeling");
         if(xSemaphoreTake(file_closed, portMAX_DELAY) != pdTRUE) ESP_LOGI(TAG, "Took too long to finish Shutting Down I2S");
         // Rename the dummy file; doing this helps prevent Ghost data from preallocating on the SD card. 
+        int length = snprintf(NULL, 0, "continuous_record_%ld_%ld_espdl.wav",boot_counter, iter_val);
+        char *wavfilename = (char *)malloc((length + 1)* sizeof(char));//<--- malloc is used!
+        snprintf(wavfilename, length + 1, "continuous_record_%ld_%ld_espdl.wav",boot_counter, iter_val);
         rename_sdcard_file(dummyWAVfile,wavfilename);
+        free(wavfilename);//<--- Anytime malloc is used I have to free it if it's not used again.
 
         // Create the filename for the predictions
         length = snprintf(NULL, 0, "inference_logs_%ld_%ld_%ld_espdl.txt",boot_counter, iter_val,highpoints);
-        char *inferencefilename = (char *)malloc((length + 1)* sizeof(char));
-        snprintf(inferencefilename, length + 1, "inference_logs_%ld_%ld_%ld_espdl.txt",boot_counter, iter_val,highpoints);
-        FILE* inference_logs = init_file(inferencefilename);
-    
+        FILE* inference_logs = init_file("inference_logs_%ld_%ld_%ld_espdl.txt",boot_counter, iter_val,highpoints);
         // save the predictions as a csv file
         fprintf(inference_logs,"%s\n",csv_header);
         for (int i = 0; i<TOT_CLASSIFICATIONS; i++)
