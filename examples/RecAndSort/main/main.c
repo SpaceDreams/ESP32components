@@ -42,7 +42,7 @@ bool audio_callback(uint8_t* raw_buffer, size_t n_bytes, struct sampleArgs* Args
     if(!atomic_load(&streameddata.CompletedSaving)){
         FILE* f = Args->rec_file;
         size_t dumvar = n_bytes;
-        bool completedsaving = false;
+        bool completedsaving = true; //The file hasn't been created yet so the initial value is false.
         if((streameddata.rec_samples+dumvar/3) > TOTSAMPLES){
             dumvar = (TOTSAMPLES - streameddata.rec_samples)*3;
             atomic_store(&streameddata.CompletedSaving, true);

@@ -53,14 +53,6 @@ FILE* openANDreturn(const char *filepath)
     */
     // Use POSIX and C standard library functions to work with files.
     ESP_LOGI(TAG, "Opening file");
-    // First check if file exists before creating a new file.
-    struct stat st;
-    if (stat(filepath, &st) == 0) {
-        // Delete it if it exists
-        unlink(filepath);
-        ESP_LOGE(TAG, "%s already exists now deleting",filepath);
-    }
-
     // Create new file
     FILE *f = fopen(filepath, "wb");
     if (f == NULL) {
@@ -82,6 +74,13 @@ FILE* init_file(const char *format,...)
     va_start(args, format); // Capture the "..." into the args variable
     // Pass the format and the packed args list to the worker function
     char * filepath = formatted_filename(format, args);
+    // First check if file exists before creating a new file.
+    struct stat st;
+    if (stat(filepath, &st) == 0) {
+        // Delete it if it exists
+        unlink(filepath);
+        ESP_LOGE(TAG, "%s already exists now deleting",filepath);
+    }
     FILE* f = openANDreturn(filepath);
     //Free all malloc's before closing this function
     free(filepath);
@@ -107,7 +106,13 @@ FILE* init_wavfile(const WAVstruct Args, const char *format,...)
     // 1. Pre-allocate the entire estimated size (e.g., 10 MB total)
     uint32_t byte_rate=  Args.sample_rate * (Args.bit_width/8) * Args.num_channels;
     uint32_t total_file_size = Args.rec_time*Args.sample_rate*(Args.bit_width/8)+WAVE_HEADER_SIZE;
-
+    // First check if file exists before creating a new file.
+    struct stat st;
+    if (stat(filepath, &st) == 0) {
+        // Delete it if it exists
+        unlink(filepath);
+        ESP_LOGE(TAG, "%s already exists now deleting",filepath);
+    }
     // preallocation
     //esp_err_t ret = esp_vfs_fat_create_contiguous_file(
     esp_vfs_fat_create_contiguous_file(
